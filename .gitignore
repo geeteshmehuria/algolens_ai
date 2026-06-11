@@ -1,0 +1,32 @@
+# Virtual Environment
+backend/.venv/
+.venv/
+venv/
+ENV/
+
+# Env files
+backend/.env
+.env
+.env.*
+!.env.example
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+backend/.pytest_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# IDEs and OS
+.vscode/
+.DS_Store
+Thumbs.db
