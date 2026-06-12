@@ -32,8 +32,14 @@ def make_problem(session):
     """Factory: creates a problem (plus its topic/pattern on demand)."""
     cache = {}
 
-    def _make(title="Problem", topic="Arrays & Hashing", pattern="Hashing",
-              difficulty="Easy", examples=None, description="desc"):
+    def _make(
+        title="Problem",
+        topic="Arrays & Hashing",
+        pattern="Hashing",
+        difficulty="Easy",
+        examples=None,
+        description="desc",
+    ):
         if topic not in cache:
             t = DSATopic(name=topic, description="")
             session.add(t)
@@ -46,8 +52,12 @@ def make_problem(session):
             cache[topic] = (t, p)
         t, p = cache[topic]
         problem = DSAProblem(
-            title=title, difficulty=difficulty, topic_id=t.id, pattern_id=p.id,
-            description=description, examples=examples or [],
+            title=title,
+            difficulty=difficulty,
+            topic_id=t.id,
+            pattern_id=p.id,
+            description=description,
+            examples=examples or [],
         )
         session.add(problem)
         session.commit()

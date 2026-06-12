@@ -73,7 +73,7 @@
 					<span class="text-2xl font-bold text-slate-900 font-title">{stats.solved_count}</span>
 				</div>
 			</Card>
-			
+
 			<Card class="flex items-center gap-4 p-5 hover:shadow-md transition-all border-slate-200 bg-white">
 				<div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl bg-blue-50 text-blue-600 border border-blue-100/50">
 					✏️

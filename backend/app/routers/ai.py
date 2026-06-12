@@ -6,8 +6,13 @@ from pydantic import BaseModel
 from app.config import settings
 from app.database import get_session
 from app.models import (
-    DSAProblem, DSATopic, DSAPattern,
-    AIGeneratedContent, AIHint, AICodeReview, ProblemAttempt,
+    DSAProblem,
+    DSATopic,
+    DSAPattern,
+    AIGeneratedContent,
+    AIHint,
+    AICodeReview,
+    ProblemAttempt,
 )
 from app.routers.auth import get_current_user, User
 from app.services import ai_service, step_generators
@@ -16,11 +21,13 @@ from app.services.progress_service import schedule_revision
 
 router = APIRouter(prefix="/ai", tags=["Google Gemini AI"])
 
+
 # --- Pydantic Schemas ---
 class CodeReviewRequest(BaseModel):
     problem_id: int
     submitted_code: str
     used_hint: bool = False
+
 
 class HintRequest(BaseModel):
     problem_id: int
@@ -31,13 +38,17 @@ class HintRequest(BaseModel):
 def _load_problem(session: Session, problem_id: int) -> tuple[DSAProblem, str, str]:
     problem = session.get(DSAProblem, problem_id)
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
     topic = session.get(DSATopic, problem.topic_id)
     pattern = session.get(DSAPattern, problem.pattern_id)
     return problem, (topic.name if topic else ""), (pattern.name if pattern else "")
 
 
-def _get_cached(session: Session, problem_id: int, kind: str) -> AIGeneratedContent | None:
+def _get_cached(
+    session: Session, problem_id: int, kind: str
+) -> AIGeneratedContent | None:
     return session.exec(
         select(AIGeneratedContent).where(
             AIGeneratedContent.problem_id == problem_id,
@@ -48,7 +59,9 @@ def _get_cached(session: Session, problem_id: int, kind: str) -> AIGeneratedCont
 
 def _ai_error(exc: Exception) -> HTTPException:
     if isinstance(exc, AIUnavailableError):
-        return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        )
     return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
 
 
@@ -57,7 +70,7 @@ def _ai_error(exc: Exception) -> HTTPException:
 def generate_explanation(
     problem_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Generate (or serve cached) AI explanation for a problem.
 
@@ -74,10 +87,14 @@ def generate_explanation(
     except (AIUnavailableError, AIGenerationError) as exc:
         raise _ai_error(exc)
 
-    session.add(AIGeneratedContent(
-        problem_id=problem_id, kind="explanation",
-        content=content, model=settings.GEMINI_MODEL,
-    ))
+    session.add(
+        AIGeneratedContent(
+            problem_id=problem_id,
+            kind="explanation",
+            content=content,
+            model=settings.GEMINI_MODEL,
+        )
+    )
     session.commit()
     return {**content, "cached": False}
 
@@ -86,7 +103,7 @@ def generate_explanation(
 def generate_animation(
     problem_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Generate (or serve cached) step-by-step animation data for a problem.
 
@@ -107,15 +124,21 @@ def generate_animation(
         explanation = _get_cached(session, problem_id, "explanation")
         pseudocode = explanation.content.get("pseudocode") if explanation else None
         try:
-            content = ai_service.generate_animation(problem, topic_name, pattern_name, pseudocode)
+            content = ai_service.generate_animation(
+                problem, topic_name, pattern_name, pseudocode
+            )
         except (AIUnavailableError, AIGenerationError) as exc:
             raise _ai_error(exc)
         model_used = settings.GEMINI_MODEL
 
-    session.add(AIGeneratedContent(
-        problem_id=problem_id, kind="animation",
-        content=content, model=model_used,
-    ))
+    session.add(
+        AIGeneratedContent(
+            problem_id=problem_id,
+            kind="animation",
+            content=content,
+            model=model_used,
+        )
+    )
     session.commit()
     return {**content, "cached": False}
 
@@ -124,23 +147,27 @@ def generate_animation(
 def review_code(
     req: CodeReviewRequest,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Review submitted code with Gemini, persist the review, and update
     the learner's attempt status. A correct solution schedules a spaced
     revision automatically."""
     problem, topic_name, pattern_name = _load_problem(session, req.problem_id)
     try:
-        review = ai_service.review_code(problem, req.submitted_code, topic_name, pattern_name)
+        review = ai_service.review_code(
+            problem, req.submitted_code, topic_name, pattern_name
+        )
     except (AIUnavailableError, AIGenerationError) as exc:
         raise _ai_error(exc)
 
     # The frontend logs a 'Reviewing' attempt right before requesting the review.
     attempt = session.exec(
-        select(ProblemAttempt).where(
+        select(ProblemAttempt)
+        .where(
             ProblemAttempt.user_id == current_user.id,
             ProblemAttempt.problem_id == req.problem_id,
-        ).order_by(ProblemAttempt.created_on.desc())
+        )
+        .order_by(ProblemAttempt.created_on.desc())
     ).first()
 
     if attempt:
@@ -149,20 +176,24 @@ def review_code(
         attempt.time_complexity = review.get("time_complexity")
         attempt.space_complexity = review.get("space_complexity")
         session.add(attempt)
-        session.add(AICodeReview(
-            attempt_id=attempt.id,
-            is_correct=review["is_correct"],
-            logic_feedback=review["logic_feedback"],
-            bugs=review["bugs"],
-            missed_edge_cases=review["missed_edge_cases"],
-            better_approach=review.get("better_approach"),
-            dsa_pattern=review.get("dsa_pattern"),
-            time_complexity=review.get("time_complexity"),
-            space_complexity=review.get("space_complexity"),
-            score=review["score"],
-        ))
+        session.add(
+            AICodeReview(
+                attempt_id=attempt.id,
+                is_correct=review["is_correct"],
+                logic_feedback=review["logic_feedback"],
+                bugs=review["bugs"],
+                missed_edge_cases=review["missed_edge_cases"],
+                better_approach=review.get("better_approach"),
+                dsa_pattern=review.get("dsa_pattern"),
+                time_complexity=review.get("time_complexity"),
+                space_complexity=review.get("space_complexity"),
+                score=review["score"],
+            )
+        )
         if review["is_correct"]:
-            schedule_revision(session, current_user.id, req.problem_id, reason="Solved with AI review")
+            schedule_revision(
+                session, current_user.id, req.problem_id, reason="Solved with AI review"
+            )
         session.commit()
 
     return review
@@ -172,21 +203,25 @@ def review_code(
 def get_hint(
     req: HintRequest,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Generate a leveled Socratic hint (1=nudge, 2=pattern, 3=approach) and log it."""
     problem, topic_name, pattern_name = _load_problem(session, req.problem_id)
     try:
-        hint_text = ai_service.generate_hint(problem, req.hint_level, topic_name, pattern_name)
+        hint_text = ai_service.generate_hint(
+            problem, req.hint_level, topic_name, pattern_name
+        )
     except (AIUnavailableError, AIGenerationError) as exc:
         raise _ai_error(exc)
 
-    session.add(AIHint(
-        user_id=current_user.id,
-        problem_id=req.problem_id,
-        hint_level=req.hint_level,
-        hint_text=hint_text,
-    ))
+    session.add(
+        AIHint(
+            user_id=current_user.id,
+            problem_id=req.problem_id,
+            hint_level=req.hint_level,
+            hint_text=hint_text,
+        )
+    )
     session.commit()
 
     return {"hint_level": req.hint_level, "hint_text": hint_text}

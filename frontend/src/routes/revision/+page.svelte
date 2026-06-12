@@ -74,7 +74,7 @@
 							<span class="text-sm font-semibold text-slate-800">Due: {item.due_date}</span>
 							<span class="text-[11px] text-slate-400 font-medium">Reason: {item.reason || 'Recent Attempt'}</span>
 						</div>
-						
+
 						<div class="flex items-center gap-3">
 							{#if item.status === 'pending'}
 								<Button variant="outline" size="sm" class="text-xs py-1 px-3 h-8 border-slate-200 bg-white hover:bg-slate-50" onclick={() => markComplete(item.id)}>

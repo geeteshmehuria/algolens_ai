@@ -23,7 +23,7 @@
 	// Simple markdown parser helper
 	function parseMarkdown(md: string): string {
 		if (!md) return '';
-		
+
 		// Escape HTML tags slightly
 		let html = md
 			.replace(/&/g, '&amp;')
@@ -47,7 +47,7 @@
 
 		// Line breaks
 		html = html.replace(/\n\n/g, '</p><p class="my-3 text-slate-600 leading-relaxed text-xs">');
-		
+
 		return `<p class="text-slate-600 leading-relaxed text-xs">${html}</p>`;
 	}
 

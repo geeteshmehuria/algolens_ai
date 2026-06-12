@@ -3,6 +3,7 @@
 
 Usage:  python make_admin.py user@example.com
 """
+
 import sys
 
 from sqlmodel import Session, select

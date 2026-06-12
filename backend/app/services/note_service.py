@@ -13,7 +13,6 @@ from app.models import (
     TopicNote,
     TopicQuizQuestion,
     UserQuizAttempt,
-    UserTopicNoteState,
     AINoteGenerationLog,
 )
 from app.services.ai_service import ai_available, AIUnavailableError, AIGenerationError
@@ -21,6 +20,7 @@ from app.services.ai_service import ai_available, AIUnavailableError, AIGenerati
 logger = logging.getLogger(__name__)
 
 # --- PYDANTIC SCHEMAS FOR VALIDATION ---
+
 
 class ProblemInfo(BaseModel):
     title: str
@@ -143,15 +143,19 @@ class QuizInput(BaseModel):
 
 _client = None
 
+
 def _get_client():
     global _client
     if _client is None:
         from google import genai
+
         _client = genai.Client(api_key=settings.GOOGLE_GEMINI_API_KEY)
     return _client
 
 
-def _call_gemini_with_usage(prompt: str, temperature: float = 0.3) -> Tuple[Dict[str, Any], int, int, int]:
+def _call_gemini_with_usage(
+    prompt: str, temperature: float = 0.3
+) -> Tuple[Dict[str, Any], int, int, int]:
     """Calls Gemini and returns (parsed_json, input_tokens, output_tokens, latency_ms)"""
     if not ai_available():
         raise AIUnavailableError(
@@ -204,11 +208,12 @@ SYSTEM_PROMPT = (
 
 # --- CORE NOTES GENERATION SERVICE ---
 
+
 def generate_topic_notes(
     session: Session,
     topic_id: int,
     user_id: Optional[int],
-    level: str = "beginner_to_intermediate"
+    level: str = "beginner_to_intermediate",
 ) -> TopicNote:
     """Sequential chunk-by-chunk generator with retry-once capability."""
     topic = session.get(DSATopic, topic_id)
@@ -236,7 +241,7 @@ def generate_topic_notes(
         '    {"section_key": "visual_walkthrough", "title": "Visual Walkthrough", "content_md": "...", "examples": [], "common_mistakes": [], "interview_tips": []},\n'
         '    {"section_key": "interview_patterns", "title": "Interview Patterns", "content_md": "...", "examples": [], "common_mistakes": [], "interview_tips": []},\n'
         '    {"section_key": "roadmap", "title": "Roadmap", "content_md": "...", "examples": [], "common_mistakes": [], "interview_tips": []}\n'
-        '  ]\n'
+        "  ]\n"
         "}\n"
         "Rules:\n"
         "- overview: what it is, why interviews love it, one real-world analogy, 150-250 words.\n"
@@ -266,7 +271,7 @@ def generate_topic_notes(
         '     "examples": [], "common_mistakes": [], "interview_tips": []},\n'
         '    {"section_key": "edge_cases", "title": "Edge Cases to Watch", "content_md": "...", "examples": [], "common_mistakes": [], "interview_tips": []},\n'
         '    {"section_key": "interview_script", "title": "Interview Script", "content_md": "...", "examples": [], "common_mistakes": [], "interview_tips": []}\n'
-        '  ],\n'
+        "  ],\n"
         '  "pseudocode_templates": [{"name": "...", "when_to_use": "...", "pseudocode": "..."}],\n'
         '  "code_templates": [{"language": "python", "name": "...", "code": "...", "line_explanations": [{"lines": "3-5", "explanation": "..."}]}],\n'
         '  "complexity_notes": {"table": [{"operation": "...", "time": "...", "space": "...", "note": "..."}], "how_to_derive": "...", "common_mistakes": ["..."]}\n'
@@ -299,7 +304,7 @@ def generate_topic_notes(
         "}\n"
         "Rules:\n"
         "- revision_notes: scannable in under 3 minutes — bullet fragments, formulas, template names, top-5 mistakes.\n"
-        "- checklist: 5-8 items, each independently verifiable by the learner (\"I can write X from scratch\"), ordered easy -> hard. Keys must be unique snake_case.\n"
+        '- checklist: 5-8 items, each independently verifiable by the learner ("I can write X from scratch"), ordered easy -> hard. Keys must be unique snake_case.\n'
         "- seven_day plan: max 2 problems/day, at least one lighter consolidation day.\n"
     )
 
@@ -323,7 +328,7 @@ def generate_topic_notes(
         "code_templates": data_b["code_templates"],
         "complexity_notes": data_b["complexity_notes"],
         "practice_plan": data_c["practice_plan"],
-        "confidence_checklist": data_c["confidence_checklist"]
+        "confidence_checklist": data_c["confidence_checklist"],
     }
 
     # Save to db
@@ -352,19 +357,23 @@ def _call_chunk_with_retry(
     schema_cls: Any,
     topic_id: int,
     user_id: Optional[int],
-    session: Session
+    session: Session,
 ) -> Tuple[Dict[str, Any], int, int, int]:
     """Helper to run model call and retry once if validation fails."""
     try:
         data, in_tokens, out_tokens, latency = _call_gemini_with_usage(prompt)
         schema_cls.model_validate(data)
-        
+
         # Log success
-        _log_generation(session, topic_id, user_id, kind, True, None, in_tokens, out_tokens, latency)
+        _log_generation(
+            session, topic_id, user_id, kind, True, None, in_tokens, out_tokens, latency
+        )
         return data, in_tokens, out_tokens, latency
     except (AIGenerationError, ValidationError) as exc:
-        logger.warning(f"First attempt failed for chunk {kind}. Error: {exc}. Retrying...")
-        
+        logger.warning(
+            f"First attempt failed for chunk {kind}. Error: {exc}. Retrying..."
+        )
+
         # Build correction prompt
         retry_prompt = (
             f"{prompt}\n\n"
@@ -374,14 +383,28 @@ def _call_chunk_with_retry(
         try:
             data, in_tokens, out_tokens, latency = _call_gemini_with_usage(retry_prompt)
             schema_cls.model_validate(data)
-            
+
             # Log success on retry
-            _log_generation(session, topic_id, user_id, kind, True, None, in_tokens, out_tokens, latency)
+            _log_generation(
+                session,
+                topic_id,
+                user_id,
+                kind,
+                True,
+                None,
+                in_tokens,
+                out_tokens,
+                latency,
+            )
             return data, in_tokens, out_tokens, latency
         except Exception as retry_exc:
             # Log failure
-            _log_generation(session, topic_id, user_id, kind, False, str(retry_exc), 0, 0, 0)
-            raise AIGenerationError(f"Generation of chunk '{kind}' failed twice. Last error: {retry_exc}") from retry_exc
+            _log_generation(
+                session, topic_id, user_id, kind, False, str(retry_exc), 0, 0, 0
+            )
+            raise AIGenerationError(
+                f"Generation of chunk '{kind}' failed twice. Last error: {retry_exc}"
+            ) from retry_exc
 
 
 def _log_generation(
@@ -393,7 +416,7 @@ def _log_generation(
     error: Optional[str],
     in_tok: int,
     out_tok: int,
-    latency: int
+    latency: int,
 ):
     log = AINoteGenerationLog(
         topic_id=topic_id,
@@ -404,7 +427,7 @@ def _log_generation(
         error=error,
         input_tokens=in_tok,
         output_tokens=out_tok,
-        latency_ms=latency
+        latency_ms=latency,
     )
     session.add(log)
     session.commit()
@@ -412,7 +435,10 @@ def _log_generation(
 
 # --- QUIZ GENERATION AND GRADING ---
 
-def generate_topic_quiz(session: Session, note_id: int, user_id: Optional[int]) -> List[TopicQuizQuestion]:
+
+def generate_topic_quiz(
+    session: Session, note_id: int, user_id: Optional[int]
+) -> List[TopicQuizQuestion]:
     """Generates quiz questions for a topic note and inserts them into DB."""
     note = session.get(TopicNote, note_id)
     if not note:
@@ -422,10 +448,12 @@ def generate_topic_quiz(session: Session, note_id: int, user_id: Optional[int]) 
     topic_name = topic.name if topic else "DSA Topic"
 
     # Gather sections overview for quiz context
-    sections_summary = "\n".join([
-        f"- {s.get('title', 'Section')}: {s.get('content_md', '')[:200]}..."
-        for s in note.content.get("sections", [])
-    ])
+    sections_summary = "\n".join(
+        [
+            f"- {s.get('title', 'Section')}: {s.get('content_md', '')[:200]}..."
+            for s in note.content.get("sections", [])
+        ]
+    )
 
     prompt = (
         f"{SYSTEM_PROMPT}\n"
@@ -435,7 +463,7 @@ def generate_topic_quiz(session: Session, note_id: int, user_id: Optional[int]) 
         "{\n"
         '  "questions": [\n'
         '    {"kind": "mcq|short_answer|dry_run|complexity", "question": "...", "options": ["option 0", "option 1", "option 2", "option 3"] or null, "correct_answer": "...", "answer_explanation": "..."}\n'
-        '  ]\n'
+        "  ]\n"
         "}\n"
         "Rules:\n"
         "- 8-10 questions: 4-5 mcq, 2 complexity, 1-2 short_answer, 1-2 dry_run.\n"
@@ -445,13 +473,22 @@ def generate_topic_quiz(session: Session, note_id: int, user_id: Optional[int]) 
         "- answer_explanation must teach WHY, not just restate the answer.\n"
     )
 
-    t0 = time.time()
     try:
         data, in_tok, out_tok, latency = _call_gemini_with_usage(prompt)
         QuizInput.model_validate(data)
-        
+
         # Log success
-        _log_generation(session, note.topic_id, user_id, "quiz", True, None, in_tok, out_tok, latency)
+        _log_generation(
+            session,
+            note.topic_id,
+            user_id,
+            "quiz",
+            True,
+            None,
+            in_tok,
+            out_tok,
+            latency,
+        )
     except Exception as exc:
         logger.warning(f"Quiz generation failed: {exc}. Retrying...")
         retry_prompt = (
@@ -462,10 +499,24 @@ def generate_topic_quiz(session: Session, note_id: int, user_id: Optional[int]) 
         try:
             data, in_tok, out_tok, latency = _call_gemini_with_usage(retry_prompt)
             QuizInput.model_validate(data)
-            _log_generation(session, note.topic_id, user_id, "quiz", True, None, in_tok, out_tok, latency)
+            _log_generation(
+                session,
+                note.topic_id,
+                user_id,
+                "quiz",
+                True,
+                None,
+                in_tok,
+                out_tok,
+                latency,
+            )
         except Exception as retry_exc:
-            _log_generation(session, note.topic_id, user_id, "quiz", False, str(retry_exc), 0, 0, 0)
-            raise AIGenerationError(f"Quiz generation failed twice. Last error: {retry_exc}") from retry_exc
+            _log_generation(
+                session, note.topic_id, user_id, "quiz", False, str(retry_exc), 0, 0, 0
+            )
+            raise AIGenerationError(
+                f"Quiz generation failed twice. Last error: {retry_exc}"
+            ) from retry_exc
 
     # Insert questions
     questions = []
@@ -477,7 +528,7 @@ def generate_topic_quiz(session: Session, note_id: int, user_id: Optional[int]) 
             question=q_data["question"],
             options=q_data.get("options"),
             correct_answer=str(q_data["correct_answer"]),
-            answer_explanation=q_data["answer_explanation"]
+            answer_explanation=q_data["answer_explanation"],
         )
         session.add(q)
         questions.append(q)
@@ -487,13 +538,10 @@ def generate_topic_quiz(session: Session, note_id: int, user_id: Optional[int]) 
 
 
 def grade_quiz_submission(
-    session: Session,
-    note_id: int,
-    user_id: int,
-    answers: List[Dict[str, str]]
+    session: Session, note_id: int, user_id: int, answers: List[Dict[str, str]]
 ) -> Tuple[UserQuizAttempt, List[Dict[str, Any]]]:
     """Grade submission server-side.
-    
+
     Accepts answers: [{"question_id": int, "answer": str}]
     Returns (attempt_record, per_question_results)
     """
@@ -520,7 +568,7 @@ def grade_quiz_submission(
 
         if q.kind in ("mcq", "complexity"):
             # exact match
-            correct = (user_ans.lower() == q.correct_answer.lower())
+            correct = user_ans.lower() == q.correct_answer.lower()
         else:
             # short_answer or dry_run. Use Gemini for grading.
             correct = _grade_with_ai(q.question, q.correct_answer, user_ans)
@@ -528,21 +576,19 @@ def grade_quiz_submission(
         if correct:
             score += 1
 
-        results.append({
-            "question_id": q_id,
-            "correct": correct,
-            "your_answer": user_ans,
-            "expected": q.correct_answer if not correct else None,
-            "explanation": feedback_explanation
-        })
+        results.append(
+            {
+                "question_id": q_id,
+                "correct": correct,
+                "your_answer": user_ans,
+                "expected": q.correct_answer if not correct else None,
+                "explanation": feedback_explanation,
+            }
+        )
 
     # Save attempt
     attempt = UserQuizAttempt(
-        user_id=user_id,
-        note_id=note_id,
-        answers=results,
-        score=score,
-        total=total
+        user_id=user_id, note_id=note_id, answers=results, score=score, total=total
     )
     session.add(attempt)
     session.commit()
@@ -563,7 +609,7 @@ def _grade_with_ai(question: str, correct_answer: str, user_answer: str) -> bool
         f"Question: {question}\n"
         f"Correct Answer: {correct_answer}\n"
         f"Student Answer: {user_answer}\n\n"
-        "Return JSON: {\"correct\": true/false}"
+        'Return JSON: {"correct": true/false}'
     )
 
     try:

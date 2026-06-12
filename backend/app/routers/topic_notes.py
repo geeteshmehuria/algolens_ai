@@ -1,6 +1,6 @@
 # app/routers/topic_notes.py
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from typing import List, Optional, Dict, Any
 
@@ -12,7 +12,6 @@ from app.models import (
     TopicQuizQuestion,
     UserQuizAttempt,
     UserTopicNoteState,
-    AINoteGenerationLog,
 )
 from app.routers.auth import get_current_user, require_admin, get_user_role_names
 from app.services.note_service import (
@@ -26,6 +25,7 @@ from pydantic import BaseModel
 router = APIRouter(tags=["Topic Notes"])
 
 # --- Request Schemas ---
+
 
 class ProgressUpdate(BaseModel):
     section_key: Optional[str] = None
@@ -57,6 +57,7 @@ class PatchNoteRequest(BaseModel):
 
 
 # --- Endpoints ---
+
 
 @router.get("/topics/{topic_id}/notes")
 def get_topic_note(
@@ -95,7 +96,10 @@ def get_topic_note(
         topic = session.get(DSATopic, topic_id)
         if not topic:
             raise HTTPException(status_code=404, detail="Topic not found")
-        return {"can_generate": True, "detail": "No study notes exist yet for this topic."}
+        return {
+            "can_generate": True,
+            "detail": "No study notes exist yet for this topic.",
+        }
 
     # Fetch user state for this topic
     state = session.exec(
@@ -132,7 +136,7 @@ def get_topic_note(
             "published_on": note.published_on,
             "is_preview": is_preview,
         },
-        "state": state
+        "state": state,
     }
 
 
@@ -150,7 +154,7 @@ def generate_notes_endpoint(
     if existing:
         raise HTTPException(
             status_code=409,
-            detail="Notes already exist for this topic. Use regenerate endpoint instead."
+            detail="Notes already exist for this topic. Use regenerate endpoint instead.",
         )
 
     try:
@@ -164,7 +168,7 @@ def generate_notes_endpoint(
             "generation": {
                 "model": note.model,
                 "chunks_succeeded": 3,
-            }
+            },
         }
     except AIUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -190,7 +194,7 @@ def regenerate_notes_endpoint(
             "generation": {
                 "model": note.model,
                 "chunks_succeeded": 3,
-            }
+            },
         }
     except AIUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -238,8 +242,14 @@ def get_note_by_id(
 
     user_roles = get_user_role_names(session, current_user.id)
     is_admin = "admin" in user_roles
-    if note.status != "published" and not is_admin and note.created_by != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to view this draft note.")
+    if (
+        note.status != "published"
+        and not is_admin
+        and note.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view this draft note."
+        )
 
     return note
 
@@ -259,7 +269,7 @@ def edit_draft_note(
     if note.status == "published":
         raise HTTPException(
             status_code=409,
-            detail="Cannot edit a published note directly. Please regenerate a new version instead."
+            detail="Cannot edit a published note directly. Please regenerate a new version instead.",
         )
 
     if body.level is not None:
@@ -392,11 +402,13 @@ def update_progress(
             ).first()
 
         if published:
-            valid_keys = {s.get("section_key") for s in published.content.get("sections", [])}
+            valid_keys = {
+                s.get("section_key") for s in published.content.get("sections", [])
+            }
             if body.section_key not in valid_keys:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Section key '{body.section_key}' not valid for this topic notes."
+                    detail=f"Section key '{body.section_key}' not valid for this topic notes.",
                 )
 
         completed_set = set(state.completed_sections)
@@ -495,8 +507,7 @@ def generate_quiz_endpoint(
 
     if existing and not force:
         raise HTTPException(
-            status_code=409,
-            detail="Quiz already exists for this note version."
+            status_code=409, detail="Quiz already exists for this note version."
         )
 
     # Delete existing if forcing
@@ -504,8 +515,7 @@ def generate_quiz_endpoint(
         user_roles = get_user_role_names(session, current_user.id)
         if "admin" not in user_roles:
             raise HTTPException(
-                status_code=403,
-                detail="Only admin can force quiz regeneration."
+                status_code=403, detail="Only admin can force quiz regeneration."
             )
         questions_to_delete = session.exec(
             select(TopicQuizQuestion).where(TopicQuizQuestion.note_id == note_id)
@@ -562,7 +572,9 @@ def submit_quiz(
     ).all()
 
     if not questions:
-        raise HTTPException(status_code=404, detail="No quiz questions found for this note.")
+        raise HTTPException(
+            status_code=404, detail="No quiz questions found for this note."
+        )
 
     valid_q_ids = {q.id for q in questions}
     payload_answers = []
@@ -571,9 +583,9 @@ def submit_quiz(
         if ans.question_id not in valid_q_ids:
             raise HTTPException(
                 status_code=400,
-                detail=f"Question id {ans.question_id} does not belong to this quiz."
+                detail=f"Question id {ans.question_id} does not belong to this quiz.",
             )
-        
+
         # Validate MCQ options
         q_obj = next(q for q in questions if q.id == ans.question_id)
         if q_obj.kind == "mcq":
@@ -584,23 +596,16 @@ def submit_quiz(
             except (ValueError, TypeError):
                 raise HTTPException(
                     status_code=400,
-                    detail=f"MCQ answer for question {ans.question_id} must be a 0-based option index ('0'-'3')."
+                    detail=f"MCQ answer for question {ans.question_id} must be a 0-based option index ('0'-'3').",
                 )
 
-        payload_answers.append({
-            "question_id": ans.question_id,
-            "answer": ans.answer
-        })
+        payload_answers.append({"question_id": ans.question_id, "answer": ans.answer})
 
     try:
         attempt, results = grade_quiz_submission(
             session, note_id, current_user.id, payload_answers
         )
-        return {
-            "score": attempt.score,
-            "total": attempt.total,
-            "results": results
-        }
+        return {"score": attempt.score, "total": attempt.total, "results": results}
     except AIUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 
@@ -652,19 +657,25 @@ def get_user_topics_list(
         state = state_map.get(t.id)
         quiz = last_quiz_score_map.get(t.id)
 
-        result.append({
-            "id": t.id,
-            "name": t.name,
-            "description": t.description,
-            "has_published_note": t.id in published_set,
-            "state": {
-                "status": state.status if state else "reading",
-                "is_bookmarked": state.is_bookmarked if state else False,
-                "completed_sections_count": len(state.completed_sections) if state else 0,
-                "last_read_on": state.last_read_on if state else None,
-            } if state else None,
-            "last_quiz": quiz
-        })
+        result.append(
+            {
+                "id": t.id,
+                "name": t.name,
+                "description": t.description,
+                "has_published_note": t.id in published_set,
+                "state": {
+                    "status": state.status if state else "reading",
+                    "is_bookmarked": state.is_bookmarked if state else False,
+                    "completed_sections_count": len(state.completed_sections)
+                    if state
+                    else 0,
+                    "last_read_on": state.last_read_on if state else None,
+                }
+                if state
+                else None,
+                "last_quiz": quiz,
+            }
+        )
 
     return result
 
@@ -680,9 +691,9 @@ def get_user_revision_notes(
         select(UserTopicNoteState)
         .where(UserTopicNoteState.user_id == current_user.id)
         .where(
-            (UserTopicNoteState.status == "completed") |
-            (UserTopicNoteState.status == "revised") |
-            (UserTopicNoteState.is_bookmarked == True)
+            (UserTopicNoteState.status == "completed")
+            | (UserTopicNoteState.status == "revised")
+            | (UserTopicNoteState.is_bookmarked == True)  # noqa: E712
         )
     ).all()
 
@@ -699,7 +710,10 @@ def get_user_revision_notes(
     ).all()
 
     note_map = {n.topic_id: n for n in notes}
-    topic_map = {t.id: t for t in session.exec(select(DSATopic).where(DSATopic.id.in_(topic_ids))).all()}
+    topic_map = {
+        t.id: t
+        for t in session.exec(select(DSATopic).where(DSATopic.id.in_(topic_ids))).all()
+    }
 
     results = []
     for state in states:
@@ -715,14 +729,16 @@ def get_user_revision_notes(
                 revision_section = s
                 break
 
-        results.append({
-            "topic_id": topic.id,
-            "topic_name": topic.name,
-            "level": note.level,
-            "revision_section": revision_section,
-            "code_templates": note.content.get("code_templates", []),
-            "confidence_checklist": note.content.get("confidence_checklist", []),
-            "checklist_state": state.checklist_state,
-        })
+        results.append(
+            {
+                "topic_id": topic.id,
+                "topic_name": topic.name,
+                "level": note.level,
+                "revision_section": revision_section,
+                "code_templates": note.content.get("code_templates", []),
+                "confidence_checklist": note.content.get("confidence_checklist", []),
+                "checklist_state": state.checklist_state,
+            }
+        )
 
     return results

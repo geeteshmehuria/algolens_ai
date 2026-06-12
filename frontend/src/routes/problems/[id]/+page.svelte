@@ -289,7 +289,7 @@
 			</div>
 
 			<h2 class="text-xl font-bold text-slate-900">{problem.title}</h2>
-			
+
 			<div class="flex flex-col gap-5">
 				<p class="text-[14.5px] text-slate-700 leading-relaxed white-space-pre-wrap">{problem.description}</p>
 
@@ -378,7 +378,7 @@
 								<h4 class="text-sm font-bold text-slate-900">Core Idea</h4>
 								<p class="text-xs text-slate-600 leading-relaxed bg-slate-50 border border-slate-100 p-4 rounded-xl">{aiExplanation.simple_explanation}</p>
 							</div>
-							
+
 							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div class="flex flex-col gap-1.5">
 									<h4 class="text-xs font-bold text-slate-900">Brute Force</h4>
@@ -470,7 +470,7 @@
 								</Button>
 								<Button variant="outline" size="sm" class="text-xs py-1 px-3 h-8 border-slate-200" onclick={stepNext} disabled={currentStepIndex === animationData.steps.length - 1}>Next ▶</Button>
 								<Button variant="outline" size="sm" class="text-xs py-1 px-3 h-8 border-slate-200" onclick={resetAnimation}>Reset</Button>
-								
+
 								<span class="text-xs font-bold text-slate-500 ml-auto bg-slate-100 px-3 py-1 rounded-full">
 									Step {currentStepIndex + 1} / {animationData.steps.length}
 								</span>
@@ -643,7 +643,7 @@
 							<Button variant="outline" size="sm" class="text-[11px] h-8 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 bg-transparent" onclick={() => handleGetHint(2)}>Hint L2</Button>
 							<Button variant="outline" size="sm" class="text-[11px] h-8 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 bg-transparent" onclick={() => handleGetHint(3)}>Hint L3</Button>
 						</div>
-						
+
 						<Button class="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-4 font-semibold" onclick={handleReviewCode} disabled={isSubmittingCode}>
 							{#if isSubmittingCode}Analyzing with AI...{:else}Review with AI{/if}
 						</Button>
@@ -708,7 +708,7 @@
 										</ul>
 									{/if}
 								</div>
-								
+
 								<div class="flex flex-col gap-2 bg-slate-50/50 border border-slate-100 p-4 rounded-xl">
 									<h4 class="text-xs font-bold text-slate-800">Missed Edge Cases</h4>
 									{#if codeReview.missed_edge_cases.length === 0}

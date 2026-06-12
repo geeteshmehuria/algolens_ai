@@ -11,7 +11,7 @@ from app.config import settings
 from app.models import DSATopic, DSAPattern, DSAProblem, Role
 
 # Import models so SQLModel metadata is aware of them
-from app import models
+
 
 def seed_database():
     print("Seeding database with default roles, DSA topics, patterns, and problems...")
@@ -23,13 +23,28 @@ def seed_database():
         session.commit()
         # 1. Seed Topics
         topics_data = [
-            ("Arrays & Hashing", "Problems relating to array manipulation, key-value mapping, and prefix logic."),
-            ("Two Pointers", "Linear traversal patterns using multiple pointers tracking positions."),
-            ("Sliding Window", "Subarray optimization patterns tracking dynamic or fixed boundaries."),
-            ("Stack", "Last-in-first-out data structures tracking bracket validation or mono-stacks."),
-            ("Binary Search", "Logarithmic search algorithms on sorted linear sequences.")
+            (
+                "Arrays & Hashing",
+                "Problems relating to array manipulation, key-value mapping, and prefix logic.",
+            ),
+            (
+                "Two Pointers",
+                "Linear traversal patterns using multiple pointers tracking positions.",
+            ),
+            (
+                "Sliding Window",
+                "Subarray optimization patterns tracking dynamic or fixed boundaries.",
+            ),
+            (
+                "Stack",
+                "Last-in-first-out data structures tracking bracket validation or mono-stacks.",
+            ),
+            (
+                "Binary Search",
+                "Logarithmic search algorithms on sorted linear sequences.",
+            ),
         ]
-        
+
         topics = []
         for name, desc in topics_data:
             stmt = select(DSATopic).where(DSATopic.name == name)
@@ -40,24 +55,50 @@ def seed_database():
                 topics.append(topic)
             else:
                 topics.append(existing)
-        
+
         session.commit()
         for t in topics:
             session.refresh(t)
-            
+
         # 2. Seed Patterns
         patterns_data = [
-            (topics[0].id, "Hashing", "Using a hash table or set to track occurrences of elements in O(N)."),
-            (topics[0].id, "Prefix Sum", "Precomputing cumulative sums to answer subarray queries in O(1)."),
-            (topics[1].id, "Two Pointers", "Iterating from both ends of the list or offset indices in O(N)."),
-            (topics[2].id, "Sliding Window", "Tracking contiguous subsets of elements with dynamic window shifts."),
-            (topics[3].id, "Stack", "Validating balanced strings or elements tracking with helper collections."),
-            (topics[4].id, "Binary Search", "Dividing sorted search intervals by half in O(log N).")
+            (
+                topics[0].id,
+                "Hashing",
+                "Using a hash table or set to track occurrences of elements in O(N).",
+            ),
+            (
+                topics[0].id,
+                "Prefix Sum",
+                "Precomputing cumulative sums to answer subarray queries in O(1).",
+            ),
+            (
+                topics[1].id,
+                "Two Pointers",
+                "Iterating from both ends of the list or offset indices in O(N).",
+            ),
+            (
+                topics[2].id,
+                "Sliding Window",
+                "Tracking contiguous subsets of elements with dynamic window shifts.",
+            ),
+            (
+                topics[3].id,
+                "Stack",
+                "Validating balanced strings or elements tracking with helper collections.",
+            ),
+            (
+                topics[4].id,
+                "Binary Search",
+                "Dividing sorted search intervals by half in O(log N).",
+            ),
         ]
-        
+
         patterns = []
         for topic_id, name, desc in patterns_data:
-            stmt = select(DSAPattern).where(DSAPattern.name == name, DSAPattern.topic_id == topic_id)
+            stmt = select(DSAPattern).where(
+                DSAPattern.name == name, DSAPattern.topic_id == topic_id
+            )
             existing = session.exec(stmt).first()
             if not existing:
                 pattern = DSAPattern(topic_id=topic_id, name=name, description=desc)
@@ -65,11 +106,11 @@ def seed_database():
                 patterns.append(pattern)
             else:
                 patterns.append(existing)
-                
+
         session.commit()
         for p in patterns:
             session.refresh(p)
-            
+
         # 3. Seed Sample Problems
         problems_data = [
             {
@@ -83,8 +124,12 @@ def seed_database():
                 "constraints_text": "2 <= nums.length <= 10^4\n-10^9 <= nums[i] <= 10^9\n-10^9 <= target <= 10^9\nOnly one valid answer exists.",
                 "starter_code": "def twoSum(nums, target):\n    # Write Python here\n    pass",
                 "examples": [
-                    {"input": "nums = [2,7,11,15], target = 9", "output": "[0,1]", "explanation": "Because nums[0] + nums[1] == 9, we return [0, 1]."}
-                ]
+                    {
+                        "input": "nums = [2,7,11,15], target = 9",
+                        "output": "[0,1]",
+                        "explanation": "Because nums[0] + nums[1] == 9, we return [0, 1].",
+                    }
+                ],
             },
             {
                 "title": "Valid Palindrome",
@@ -97,8 +142,12 @@ def seed_database():
                 "constraints_text": "1 <= s.length <= 2 * 10^5\ns consists only of printable ASCII characters.",
                 "starter_code": "def isPalindrome(s):\n    # Write Python here\n    pass",
                 "examples": [
-                    {"input": "s = \"A man, a plan, a canal: Panama\"", "output": "true", "explanation": "\"amanaplanacanalpanama\" is a palindrome."}
-                ]
+                    {
+                        "input": 's = "A man, a plan, a canal: Panama"',
+                        "output": "true",
+                        "explanation": '"amanaplanacanalpanama" is a palindrome.',
+                    }
+                ],
             },
             {
                 "title": "Binary Search",
@@ -111,13 +160,19 @@ def seed_database():
                 "constraints_text": "1 <= nums.length <= 10^4\n-10^4 < nums[i], target < 10^4\nAll the integers in nums are unique.\nnums is sorted in ascending order.",
                 "starter_code": "def search(nums, target):\n    # Write Python here\n    pass",
                 "examples": [
-                    {"input": "nums = [-1,0,3,5,9,12], target = 9", "output": "4", "explanation": "9 exists in nums and its index is 4"}
-                ]
-            }
+                    {
+                        "input": "nums = [-1,0,3,5,9,12], target = 9",
+                        "output": "4",
+                        "explanation": "9 exists in nums and its index is 4",
+                    }
+                ],
+            },
         ]
-        
+
         for prob in problems_data:
-            stmt = select(DSAProblem).where(DSAProblem.leetcode_slug == prob["leetcode_slug"])
+            stmt = select(DSAProblem).where(
+                DSAProblem.leetcode_slug == prob["leetcode_slug"]
+            )
             existing = session.exec(stmt).first()
             if not existing:
                 problem = DSAProblem(
@@ -130,12 +185,13 @@ def seed_database():
                     description=prob["description"],
                     constraints_text=prob["constraints_text"],
                     starter_code=prob["starter_code"],
-                    examples=prob["examples"]
+                    examples=prob["examples"],
                 )
                 session.add(problem)
-                
+
         session.commit()
     print("Database seeding completed successfully!")
+
 
 def create_db_and_tables():
     print(f"Connecting to database at: {settings.DATABASE_URL.split('@')[-1]}...")
@@ -146,7 +202,10 @@ def create_db_and_tables():
         SQLModel.metadata.create_all(engine)
         from alembic.config import Config
         from alembic import command
-        alembic_cfg = Config(os.path.join(os.path.dirname(os.path.abspath(__file__)), "alembic.ini"))
+
+        alembic_cfg = Config(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "alembic.ini")
+        )
         command.stamp(alembic_cfg, "head")
         print("Success: Database tables created and stamped at Alembic head!")
         seed_database()
@@ -155,9 +214,13 @@ def create_db_and_tables():
         print(f"Details: {e}", file=sys.stderr)
         print("\nPlease make sure that:", file=sys.stderr)
         print("1. Your PostgreSQL server is running.", file=sys.stderr)
-        print("2. You have created the target database (e.g. 'algolens_db').", file=sys.stderr)
+        print(
+            "2. You have created the target database (e.g. 'algolens_db').",
+            file=sys.stderr,
+        )
         print("3. Your credentials in backend/.env are correct.", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     create_db_and_tables()

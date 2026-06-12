@@ -10,6 +10,7 @@ from app.services.step_generators import (
 
 # --- input parsing ---
 
+
 def test_parse_array_and_target():
     parsed = _parse_example_input("nums = [2,7,11,15], target = 9")
     assert parsed["array"] == [2, 7, 11, 15]
@@ -22,6 +23,7 @@ def test_parse_string():
 
 
 # --- binary search ---
+
 
 def test_binary_search_finds_target():
     result = binary_search_steps([-1, 0, 3, 5, 9, 12], 9)
@@ -49,6 +51,7 @@ def test_binary_search_steps_have_valid_indices():
 
 # --- two pointers ---
 
+
 def test_pair_sum_found_pair_adds_to_target():
     result = two_pointers_pair_sum_steps([1, 3, 4, 6, 8], 10)
     final = result["steps"][-1]
@@ -64,7 +67,10 @@ def test_pair_sum_no_pair():
 
 
 def test_palindrome_detects_true_and_false():
-    assert "IS a palindrome" in two_pointers_palindrome_steps("racecar")["steps"][-1]["result"]
+    assert (
+        "IS a palindrome"
+        in two_pointers_palindrome_steps("racecar")["steps"][-1]["result"]
+    )
     assert "false" in two_pointers_palindrome_steps("abc")["steps"][-1]["result"]
 
 
@@ -74,6 +80,7 @@ def test_palindrome_strips_non_alphanumeric():
 
 
 # --- stack ---
+
 
 def test_stack_valid_brackets():
     result = stack_bracket_steps("([])")
@@ -100,9 +107,12 @@ def test_stack_ops_are_consistent():
 
 # --- pattern dispatch ---
 
+
 def test_generate_for_problem_dispatches_by_pattern(session, make_problem):
     bs = make_problem(
-        title="Binary Search", topic="Binary Search", pattern="Binary Search",
+        title="Binary Search",
+        topic="Binary Search",
+        pattern="Binary Search",
         examples=[{"input": "nums = [-1,0,3,5,9,12], target = 9", "output": "4"}],
     )
     result = generate_for_problem(bs, "Binary Search", "Binary Search")
@@ -112,7 +122,9 @@ def test_generate_for_problem_dispatches_by_pattern(session, make_problem):
 
 def test_generate_for_problem_palindrome_uses_string(session, make_problem):
     p = make_problem(
-        title="Valid Palindrome", topic="Two Pointers", pattern="Two Pointers",
+        title="Valid Palindrome",
+        topic="Two Pointers",
+        pattern="Two Pointers",
         description="check if it is a palindrome",
         examples=[{"input": 's = "racecar"', "output": "true"}],
     )

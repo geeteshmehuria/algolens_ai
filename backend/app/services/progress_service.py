@@ -1,5 +1,6 @@
 # app/services/progress_service.py
 """Spaced repetition scheduling and user progress helpers."""
+
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 
@@ -11,7 +12,9 @@ from app.models import RevisionQueue, ProblemAttempt, DSAProblem, DSATopic
 REVISION_INTERVALS = [3, 7, 16, 35]
 
 
-def schedule_revision(session: Session, user_id: int, problem_id: int, reason: str = "Spaced repetition") -> Optional[RevisionQueue]:
+def schedule_revision(
+    session: Session, user_id: int, problem_id: int, reason: str = "Spaced repetition"
+) -> Optional[RevisionQueue]:
     """Queue the next review for a problem the user just solved/reviewed.
 
     The interval grows with how many reviews of this problem were already
@@ -27,13 +30,16 @@ def schedule_revision(session: Session, user_id: int, problem_id: int, reason: s
     if pending:
         return None
 
-    completed_count = session.exec(
-        select(func.count(RevisionQueue.id)).where(
-            RevisionQueue.user_id == user_id,
-            RevisionQueue.problem_id == problem_id,
-            RevisionQueue.status == "completed",
-        )
-    ).one() or 0
+    completed_count = (
+        session.exec(
+            select(func.count(RevisionQueue.id)).where(
+                RevisionQueue.user_id == user_id,
+                RevisionQueue.problem_id == problem_id,
+                RevisionQueue.status == "completed",
+            )
+        ).one()
+        or 0
+    )
 
     interval = REVISION_INTERVALS[min(completed_count, len(REVISION_INTERVALS) - 1)]
     entry = RevisionQueue(
@@ -95,7 +101,9 @@ def compute_topic_proficiency(session: Session, user_id: int) -> List[dict]:
 
     by_topic: dict = {}
     for attempt, topic_id in attempts:
-        bucket = by_topic.setdefault(topic_id, {"attempted": set(), "solved": set(), "scores": []})
+        bucket = by_topic.setdefault(
+            topic_id, {"attempted": set(), "solved": set(), "scores": []}
+        )
         bucket["attempted"].add(attempt.problem_id)
         if attempt.status == "Correct":
             bucket["solved"].add(attempt.problem_id)
@@ -111,13 +119,15 @@ def compute_topic_proficiency(session: Session, user_id: int) -> List[dict]:
             score = round(0.6 * solve_rate + 0.4 * avg_ai)
         else:
             score = round(solve_rate)
-        results.append({
-            "topic_id": topic_id,
-            "topic_name": topic.name if topic else "Unknown",
-            "score": score,
-            "attempted": len(bucket["attempted"]),
-            "solved": len(bucket["solved"]),
-        })
+        results.append(
+            {
+                "topic_id": topic_id,
+                "topic_name": topic.name if topic else "Unknown",
+                "score": score,
+                "attempted": len(bucket["attempted"]),
+                "solved": len(bucket["solved"]),
+            }
+        )
 
     results.sort(key=lambda t: t["score"])
     return results
@@ -125,29 +135,45 @@ def compute_topic_proficiency(session: Session, user_id: int) -> List[dict]:
 
 def recommend_problems(session: Session, user_id: int, limit: int = 3) -> List[dict]:
     """Unsolved active problems, weakest topics first, then easier difficulties."""
-    solved_ids = set(session.exec(
-        select(ProblemAttempt.problem_id).where(
-            ProblemAttempt.user_id == user_id,
-            ProblemAttempt.status == "Correct",
-        ).distinct()
-    ).all())
+    solved_ids = set(
+        session.exec(
+            select(ProblemAttempt.problem_id)
+            .where(
+                ProblemAttempt.user_id == user_id,
+                ProblemAttempt.status == "Correct",
+            )
+            .distinct()
+        ).all()
+    )
 
-    weak_order = {t["topic_id"]: i for i, t in enumerate(compute_topic_proficiency(session, user_id))}
+    weak_order = {
+        t["topic_id"]: i
+        for i, t in enumerate(compute_topic_proficiency(session, user_id))
+    }
     difficulty_order = {"Easy": 0, "Medium": 1, "Hard": 2}
 
-    problems = session.exec(select(DSAProblem).where(DSAProblem.is_active == True)).all()  # noqa: E712
+    problems = session.exec(
+        select(DSAProblem).where(DSAProblem.is_active == True)  # noqa: E712
+    ).all()
     unsolved = [p for p in problems if p.id not in solved_ids]
     # Weak topics first; topics never attempted go after weak ones but before strong ones is
     # debatable — we place them in the middle so new learners still get variety.
-    unsolved.sort(key=lambda p: (weak_order.get(p.topic_id, len(weak_order)), difficulty_order.get(p.difficulty, 3)))
+    unsolved.sort(
+        key=lambda p: (
+            weak_order.get(p.topic_id, len(weak_order)),
+            difficulty_order.get(p.difficulty, 3),
+        )
+    )
 
     recommendations = []
     for p in unsolved[:limit]:
         topic = session.get(DSATopic, p.topic_id)
-        recommendations.append({
-            "id": p.id,
-            "title": p.title,
-            "difficulty": p.difficulty,
-            "topic": topic.name if topic else "General",
-        })
+        recommendations.append(
+            {
+                "id": p.id,
+                "title": p.title,
+                "difficulty": p.difficulty,
+                "topic": topic.name if topic else "General",
+            }
+        )
     return recommendations

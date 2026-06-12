@@ -6,6 +6,7 @@ Raises AIUnavailableError when no API key is configured and AIGenerationError
 when the model call or response parsing fails — routers translate these into
 honest HTTP errors instead of serving fake data.
 """
+
 import json
 import re
 from typing import Any, Dict, Optional
@@ -74,6 +75,7 @@ def _get_client():
     global _client
     if _client is None:
         from google import genai
+
         _client = genai.Client(api_key=settings.GOOGLE_GEMINI_API_KEY)
     return _client
 
@@ -107,7 +109,9 @@ def _generate_json(prompt: str, temperature: float = 0.3) -> Dict[str, Any]:
         raise AIGenerationError(f"Gemini returned invalid JSON: {text[:200]}") from exc
 
 
-def _problem_context(problem: DSAProblem, topic_name: str = "", pattern_name: str = "") -> str:
+def _problem_context(
+    problem: DSAProblem, topic_name: str = "", pattern_name: str = ""
+) -> str:
     examples = json.dumps(problem.examples or [], indent=2)
     return (
         f"Problem title: {problem.title}\n"
@@ -128,7 +132,9 @@ _TUTOR_RULES = (
 )
 
 
-def generate_explanation(problem: DSAProblem, topic_name: str = "", pattern_name: str = "") -> Dict[str, Any]:
+def generate_explanation(
+    problem: DSAProblem, topic_name: str = "", pattern_name: str = ""
+) -> Dict[str, Any]:
     prompt = (
         f"{_TUTOR_RULES}\n\n{_problem_context(problem, topic_name, pattern_name)}\n"
         "Produce a structured explanation as JSON with EXACTLY these keys:\n"
@@ -145,8 +151,14 @@ def generate_explanation(problem: DSAProblem, topic_name: str = "", pattern_name
     )
     data = _generate_json(prompt)
     required = [
-        "simple_explanation", "brute_force", "optimized_approach", "pseudocode",
-        "time_complexity", "space_complexity", "common_mistakes", "pattern",
+        "simple_explanation",
+        "brute_force",
+        "optimized_approach",
+        "pseudocode",
+        "time_complexity",
+        "space_complexity",
+        "common_mistakes",
+        "pattern",
     ]
     missing = [k for k in required if k not in data]
     if missing:
@@ -197,12 +209,21 @@ def generate_animation(
     data = _generate_json(prompt)
     if data.get("animation_type") not in ANIMATION_CONTRACTS:
         data["animation_type"] = anim_type
-    if not isinstance(data.get("steps"), list) or not data["steps"] or not isinstance(data.get("input"), dict):
+    if (
+        not isinstance(data.get("steps"), list)
+        or not data["steps"]
+        or not isinstance(data.get("input"), dict)
+    ):
         raise AIGenerationError("Animation response missing usable 'input' or 'steps'.")
     return data
 
 
-def review_code(problem: DSAProblem, submitted_code: str, topic_name: str = "", pattern_name: str = "") -> Dict[str, Any]:
+def review_code(
+    problem: DSAProblem,
+    submitted_code: str,
+    topic_name: str = "",
+    pattern_name: str = "",
+) -> Dict[str, Any]:
     prompt = (
         f"{_TUTOR_RULES}\n\n{_problem_context(problem, topic_name, pattern_name)}\n"
         f"The learner submitted this Python code:\n```python\n{submitted_code[:6000]}\n```\n\n"
@@ -221,7 +242,14 @@ def review_code(problem: DSAProblem, submitted_code: str, topic_name: str = "", 
         "}"
     )
     data = _generate_json(prompt, temperature=0.2)
-    required = ["is_correct", "logic_feedback", "bugs", "missed_edge_cases", "better_approach", "score"]
+    required = [
+        "is_correct",
+        "logic_feedback",
+        "bugs",
+        "missed_edge_cases",
+        "better_approach",
+        "score",
+    ]
     missing = [k for k in required if k not in data]
     if missing:
         raise AIGenerationError(f"Code review response missing keys: {missing}")
@@ -246,12 +274,14 @@ _HINT_LEVELS = {
 }
 
 
-def generate_hint(problem: DSAProblem, hint_level: int, topic_name: str = "", pattern_name: str = "") -> str:
+def generate_hint(
+    problem: DSAProblem, hint_level: int, topic_name: str = "", pattern_name: str = ""
+) -> str:
     level = hint_level if hint_level in _HINT_LEVELS else 3
     prompt = (
         f"{_TUTOR_RULES}\n\n{_problem_context(problem, topic_name, pattern_name)}\n"
         f"Give the learner ONE hint at level {level}: {_HINT_LEVELS[level]}\n"
-        "Maximum 60 words. Return JSON: {\"hint_text\": \"...\"}"
+        'Maximum 60 words. Return JSON: {"hint_text": "..."}'
     )
     data = _generate_json(prompt, temperature=0.5)
     hint = data.get("hint_text")
@@ -286,5 +316,9 @@ def generate_roadmap(weak_topics: list, candidate_problems: list) -> Dict[str, A
     valid_ids = {p["id"] for p in candidate_problems}
     for day in data["days"]:
         if isinstance(day.get("problems"), list):
-            day["problems"] = [p for p in day["problems"] if isinstance(p, dict) and p.get("id") in valid_ids]
+            day["problems"] = [
+                p
+                for p in day["problems"]
+                if isinstance(p, dict) and p.get("id") in valid_ids
+            ]
     return data

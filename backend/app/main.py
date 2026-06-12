@@ -2,17 +2,27 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import settings
 
 # Import routers
-from app.routers import auth, topics, problems, attempts, revision, roadmap, dashboard, ai, user_problems, topic_notes
+from app.routers import (
+    auth,
+    topics,
+    problems,
+    attempts,
+    revision,
+    roadmap,
+    dashboard,
+    ai,
+    user_problems,
+    topic_notes,
+)
 
 # Schema is managed by Alembic — run `alembic upgrade head` (or init_db.py for
 # a fresh database) before starting the server.
 app = FastAPI(
     title="AlgoLens AI API",
     description="Backend service for AlgoLens AI DSA learning platform.",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Configure CORS
@@ -45,11 +55,12 @@ app.include_router(ai.router, prefix="/api")
 app.include_router(user_problems.router, prefix="/api")
 app.include_router(topic_notes.router, prefix="/api")
 
+
 @app.get("/")
 def read_root():
     return {
         "status": "online",
         "app": "AlgoLens AI API",
         "version": "1.0.0",
-        "docs_url": "/docs"
+        "docs_url": "/docs",
     }

@@ -5,6 +5,7 @@ Revises: 0001
 Create Date: 2026-06-12
 
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -30,7 +31,9 @@ def upgrade() -> None:
         "user_bookmarks",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("problem_id", sa.Integer(), sa.ForeignKey("dsa_problems.id"), nullable=False),
+        sa.Column(
+            "problem_id", sa.Integer(), sa.ForeignKey("dsa_problems.id"), nullable=False
+        ),
         sa.Column("created_on", sa.DateTime(), nullable=False),
         sa.UniqueConstraint("user_id", "problem_id", name="uq_bookmark_user_problem"),
     )
@@ -39,7 +42,9 @@ def upgrade() -> None:
         "user_notes",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("problem_id", sa.Integer(), sa.ForeignKey("dsa_problems.id"), nullable=False),
+        sa.Column(
+            "problem_id", sa.Integer(), sa.ForeignKey("dsa_problems.id"), nullable=False
+        ),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("created_on", sa.DateTime(), nullable=False),
         sa.Column("updated_on", sa.DateTime(), nullable=False),
@@ -50,12 +55,16 @@ def upgrade() -> None:
         "user_problem_progress",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("problem_id", sa.Integer(), sa.ForeignKey("dsa_problems.id"), nullable=False),
+        sa.Column(
+            "problem_id", sa.Integer(), sa.ForeignKey("dsa_problems.id"), nullable=False
+        ),
         sa.Column("confidence", sa.SmallInteger(), nullable=True),
         sa.Column("updated_on", sa.DateTime(), nullable=False),
         sa.UniqueConstraint("user_id", "problem_id", name="uq_progress_user_problem"),
     )
-    op.create_index(op.f("ix_user_problem_progress_user_id"), "user_problem_progress", ["user_id"])
+    op.create_index(
+        op.f("ix_user_problem_progress_user_id"), "user_problem_progress", ["user_id"]
+    )
 
     # Seed the two base roles.
     roles = sa.table("roles", sa.column("name", sa.String))

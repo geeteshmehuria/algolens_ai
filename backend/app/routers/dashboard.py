@@ -17,6 +17,7 @@ from app.services.progress_service import (
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
+
 class DashboardSummary(BaseModel):
     solved_count: int
     attempted_count: int
@@ -25,34 +26,44 @@ class DashboardSummary(BaseModel):
     weak_topics: List[Dict[str, Any]]
     recommended_problems: List[Dict[str, Any]]
 
+
 @router.get("/summary", response_model=DashboardSummary)
 def get_dashboard_summary(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Summary statistics for the user dashboard — all computed from real
     attempts, never placeholder data."""
-    attempted_count = session.exec(
-        select(func.count(func.distinct(ProblemAttempt.problem_id))).where(
-            ProblemAttempt.user_id == current_user.id
-        )
-    ).one() or 0
+    attempted_count = (
+        session.exec(
+            select(func.count(func.distinct(ProblemAttempt.problem_id))).where(
+                ProblemAttempt.user_id == current_user.id
+            )
+        ).one()
+        or 0
+    )
 
-    solved_count = session.exec(
-        select(func.count(func.distinct(ProblemAttempt.problem_id))).where(
-            ProblemAttempt.user_id == current_user.id,
-            ProblemAttempt.status == "Correct"
-        )
-    ).one() or 0
+    solved_count = (
+        session.exec(
+            select(func.count(func.distinct(ProblemAttempt.problem_id))).where(
+                ProblemAttempt.user_id == current_user.id,
+                ProblemAttempt.status == "Correct",
+            )
+        ).one()
+        or 0
+    )
 
     # Only revisions actually due (today or overdue), not everything pending.
-    revision_due_count = session.exec(
-        select(func.count(RevisionQueue.id)).where(
-            RevisionQueue.user_id == current_user.id,
-            RevisionQueue.status == "pending",
-            RevisionQueue.due_date <= date.today(),
-        )
-    ).one() or 0
+    revision_due_count = (
+        session.exec(
+            select(func.count(RevisionQueue.id)).where(
+                RevisionQueue.user_id == current_user.id,
+                RevisionQueue.status == "pending",
+                RevisionQueue.due_date <= date.today(),
+            )
+        ).one()
+        or 0
+    )
 
     streak = calculate_streak(session, current_user.id)
 

@@ -85,7 +85,7 @@
 			<div class="flex flex-col">
 				<h3 class="text-base font-bold text-slate-800">{activeRoadmap.title}</h3>
 				<span class="text-[11px] text-slate-400 font-medium mb-8">Generated on: {activeRoadmap.created_on.split('T')[0]}</span>
-				
+
 				<div class="flex flex-col gap-6 relative pl-6 border-l border-slate-200">
 					{#each activeRoadmap.roadmap_data.days as day}
 						<div class="flex gap-4 relative">

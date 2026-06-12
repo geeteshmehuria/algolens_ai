@@ -6,10 +6,11 @@ from typing import List, Optional
 import urllib.parse
 
 from app.database import get_session
-from app.models import DSAProblem, DSATopic, DSAPattern
-from app.routers.auth import get_current_user, require_admin, User
+from app.models import DSAProblem
+from app.routers.auth import require_admin, User
 
 router = APIRouter(prefix="/problems", tags=["Problems"])
+
 
 # --- Pydantic Schemas ---
 class ProblemCreate(BaseModel):
@@ -22,11 +23,13 @@ class ProblemCreate(BaseModel):
     starter_code: Optional[str] = None
     leetcode_url: Optional[str] = None
 
+
 class LeetCodeImportRequest(BaseModel):
     url: str
     topic_id: int
     pattern_id: int
     difficulty: str
+
 
 # --- Endpoints ---
 @router.get("", response_model=List[DSAProblem])
@@ -34,17 +37,17 @@ def get_problems(
     topic_id: Optional[int] = None,
     pattern_id: Optional[int] = None,
     difficulty: Optional[str] = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
     """Retrieve list of DSA problems, with optional filters"""
-    statement = select(DSAProblem).where(DSAProblem.is_active == True)
+    statement = select(DSAProblem).where(DSAProblem.is_active == True)  # noqa: E712
     if topic_id:
         statement = statement.where(DSAProblem.topic_id == topic_id)
     if pattern_id:
         statement = statement.where(DSAProblem.pattern_id == pattern_id)
     if difficulty:
         statement = statement.where(DSAProblem.difficulty == difficulty)
-        
+
     return session.exec(statement).all()
 
 
@@ -54,8 +57,7 @@ def get_problem(problem_id: int, session: Session = Depends(get_session)):
     problem = session.get(DSAProblem, problem_id)
     if not problem:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Problem not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
         )
     return problem
 
@@ -64,7 +66,7 @@ def get_problem(problem_id: int, session: Session = Depends(get_session)):
 def create_problem(
     problem_data: ProblemCreate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin),
 ):
     """Create a new problem (admin only)"""
     new_problem = DSAProblem(
@@ -75,13 +77,13 @@ def create_problem(
         description=problem_data.description,
         constraints_text=problem_data.constraints_text,
         starter_code=problem_data.starter_code,
-        leetcode_url=problem_data.leetcode_url
+        leetcode_url=problem_data.leetcode_url,
     )
     if problem_data.leetcode_url:
         # Simple extraction of slug from URL: e.g. https://leetcode.com/problems/two-sum/
         parsed_url = urllib.parse.urlparse(problem_data.leetcode_url)
-        path_parts = [p for p in parsed_url.path.split('/') if p]
-        if len(path_parts) >= 2 and path_parts[0] == 'problems':
+        path_parts = [p for p in parsed_url.path.split("/") if p]
+        if len(path_parts) >= 2 and path_parts[0] == "problems":
             new_problem.leetcode_slug = path_parts[1]
 
     session.add(new_problem)
@@ -94,20 +96,20 @@ def create_problem(
 def import_leetcode_url(
     req: LeetCodeImportRequest,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin),
 ):
     """Import a problem using LeetCode URL, check if exists, otherwise create a placeholder (admin only)"""
     # Extract slug
     parsed_url = urllib.parse.urlparse(req.url)
-    path_parts = [p for p in parsed_url.path.split('/') if p]
+    path_parts = [p for p in parsed_url.path.split("/") if p]
     slug = None
-    if len(path_parts) >= 2 and path_parts[0] == 'problems':
+    if len(path_parts) >= 2 and path_parts[0] == "problems":
         slug = path_parts[1]
-    
+
     if not slug:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid LeetCode URL format. Expected: https://leetcode.com/problems/slug-name/"
+            detail="Invalid LeetCode URL format. Expected: https://leetcode.com/problems/slug-name/",
         )
 
     # Check if exists
@@ -118,7 +120,7 @@ def import_leetcode_url(
 
     # Create new placeholder problem
     # Title capitalized from slug
-    title = slug.replace('-', ' ').title()
+    title = slug.replace("-", " ").title()
     placeholder = DSAProblem(
         title=title,
         leetcode_slug=slug,
@@ -127,7 +129,7 @@ def import_leetcode_url(
         topic_id=req.topic_id,
         pattern_id=req.pattern_id,
         description=f"Placeholder description for {title}. Click standard LeetCode link or use AI generator to create full logic explanations.",
-        constraints_text="Constraints will be filled upon AI explanation generation."
+        constraints_text="Constraints will be filled upon AI explanation generation.",
     )
     session.add(placeholder)
     session.commit()

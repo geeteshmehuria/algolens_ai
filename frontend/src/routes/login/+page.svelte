@@ -76,7 +76,7 @@
 				Visual DSA learning with AI explanations and animations
 			</CardDescription>
 		</CardHeader>
-		
+
 		<CardContent class="px-8 pb-8">
 			<!-- Tabs -->
 			<div class="flex border-b border-slate-200 mb-6">

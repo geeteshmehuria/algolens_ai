@@ -22,7 +22,7 @@
 
 	// Parse lines and helper to check for explanations
 	let lines = $derived(template.code.split('\n'));
-	
+
 	function getExplanationForLine(lineNum: number): LineExplanation | null {
 		if (!template.line_explanations) return null;
 		for (const expl of template.line_explanations) {
@@ -94,7 +94,7 @@
 		<!-- Explanation Panel (40%) -->
 		<div class="md:col-span-2 p-5 bg-slate-900/40 text-xs flex flex-col gap-3 justify-center">
 			<h4 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest border-b border-slate-800/80 pb-2">Line Annotations</h4>
-			
+
 			{#if selectedLineIndex !== null}
 				{@const expl = getExplanationForLine(selectedLineIndex)}
 				{#if expl}

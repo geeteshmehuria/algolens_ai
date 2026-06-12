@@ -19,7 +19,7 @@
 		let elapsed = 0;
 		timer = setInterval(() => {
 			elapsed += 1;
-			
+
 			// Update progress bar
 			if (progressPercent < 95) {
 				progressPercent += elapsed < 15 ? 2 : elapsed < 30 ? 1 : 0.5;

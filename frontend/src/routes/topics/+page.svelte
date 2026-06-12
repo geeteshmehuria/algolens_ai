@@ -78,7 +78,7 @@
 				Access deep structured revision summaries, complexity derivations, and interactive quizzes for 22 DSA categories.
 			</CardDescription>
 		</CardHeader>
-		
+
 		<div class="flex gap-2">
 			<input
 				type="text"

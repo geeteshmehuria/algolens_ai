@@ -14,8 +14,11 @@ from app.services.progress_service import (
 
 def _attempt(session, user, problem, status="Correct", days_ago=0, ai_score=None):
     a = ProblemAttempt(
-        user_id=user.id, problem_id=problem.id, submitted_code="code",
-        status=status, ai_score=ai_score,
+        user_id=user.id,
+        problem_id=problem.id,
+        submitted_code="code",
+        status=status,
+        ai_score=ai_score,
         created_on=datetime.utcnow() - timedelta(days=days_ago),
     )
     session.add(a)
@@ -24,6 +27,7 @@ def _attempt(session, user, problem, status="Correct", days_ago=0, ai_score=None
 
 
 # --- schedule_revision ---
+
 
 def test_first_revision_due_in_three_days(session, user, make_problem):
     problem = make_problem()
@@ -49,10 +53,14 @@ def test_intervals_grow_with_completed_reviews(session, user, make_problem):
     problem = make_problem()
     # Two completed reviews already on record -> next interval is the third (16d).
     for _ in range(2):
-        session.add(RevisionQueue(
-            user_id=user.id, problem_id=problem.id,
-            due_date=date.today(), status="completed",
-        ))
+        session.add(
+            RevisionQueue(
+                user_id=user.id,
+                problem_id=problem.id,
+                due_date=date.today(),
+                status="completed",
+            )
+        )
     session.commit()
 
     entry = schedule_revision(session, user.id, problem.id)
@@ -63,10 +71,14 @@ def test_intervals_grow_with_completed_reviews(session, user, make_problem):
 def test_interval_caps_at_last_value(session, user, make_problem):
     problem = make_problem()
     for _ in range(10):
-        session.add(RevisionQueue(
-            user_id=user.id, problem_id=problem.id,
-            due_date=date.today(), status="completed",
-        ))
+        session.add(
+            RevisionQueue(
+                user_id=user.id,
+                problem_id=problem.id,
+                due_date=date.today(),
+                status="completed",
+            )
+        )
     session.commit()
 
     entry = schedule_revision(session, user.id, problem.id)
@@ -75,6 +87,7 @@ def test_interval_caps_at_last_value(session, user, make_problem):
 
 
 # --- calculate_streak ---
+
 
 def test_streak_zero_without_attempts(session, user):
     assert calculate_streak(session, user.id) == 0
@@ -110,6 +123,7 @@ def test_streak_zero_when_last_activity_too_old(session, user, make_problem):
 
 # --- compute_topic_proficiency ---
 
+
 def test_proficiency_solve_rate_only(session, user, make_problem):
     p1 = make_problem(title="P1")
     p2 = make_problem(title="P2")
@@ -144,9 +158,10 @@ def test_proficiency_sorted_weakest_first(session, user, make_problem):
 
 # --- recommend_problems ---
 
+
 def test_recommendations_exclude_solved(session, user, make_problem):
     solved = make_problem(title="Solved One")
-    unsolved = make_problem(title="Unsolved One")
+    make_problem(title="Unsolved One")
     _attempt(session, user, solved, status="Correct")
 
     recs = recommend_problems(session, user.id, limit=5)
@@ -156,11 +171,15 @@ def test_recommendations_exclude_solved(session, user, make_problem):
 
 
 def test_recommendations_prioritize_weak_topics(session, user, make_problem):
-    weak_p = make_problem(title="Weak Topic Problem", topic="Binary Search", pattern="Binary Search")
-    strong_p = make_problem(title="Strong Topic Problem", topic="Stack", pattern="Stack")
-    extra_weak = make_problem(title="Another Weak", topic="Binary Search", pattern="Binary Search")
-    _attempt(session, user, weak_p, status="Incorrect")   # Binary Search is weak (0%)
-    _attempt(session, user, strong_p, status="Correct")   # Stack is strong (100%)
+    weak_p = make_problem(
+        title="Weak Topic Problem", topic="Binary Search", pattern="Binary Search"
+    )
+    strong_p = make_problem(
+        title="Strong Topic Problem", topic="Stack", pattern="Stack"
+    )
+    make_problem(title="Another Weak", topic="Binary Search", pattern="Binary Search")
+    _attempt(session, user, weak_p, status="Incorrect")  # Binary Search is weak (0%)
+    _attempt(session, user, strong_p, status="Correct")  # Stack is strong (100%)
 
     recs = recommend_problems(session, user.id, limit=2)
     # Weak-topic problems come first.

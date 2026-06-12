@@ -52,7 +52,7 @@
 	let topicsList = $state<TopicItem[]>([]);
 	let noteDetails = $state<NoteDetails | null>(null);
 	let userState = $state<any>(null);
-	
+
 	let loading = $state(true);
 	let generating = $state(false);
 	let canGenerate = $state(false);

@@ -8,11 +8,17 @@ from typing import List, Optional
 
 from app.database import get_session
 from app.models import User, Role, UserRole
-from app.utils import hash_password, verify_password, create_access_token, decode_access_token
+from app.utils import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    decode_access_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 security = HTTPBearer()
+
 
 # --- Pydantic Schemas ---
 class UserRegister(BaseModel):
@@ -20,13 +26,16 @@ class UserRegister(BaseModel):
     password: str
     full_name: str
 
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
 
 class UserResponse(BaseModel):
     id: int
@@ -38,6 +47,7 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class MeResponse(UserResponse):
     roles: List[str] = []
 
@@ -45,7 +55,7 @@ class MeResponse(UserResponse):
 # --- Authentication Dependency ---
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ) -> User:
     """Dependency to validate JWT and get current logged-in user"""
     token = credentials.credentials
@@ -56,7 +66,7 @@ def get_current_user(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     email: str = payload.get("sub")
     if not email:
         raise HTTPException(
@@ -64,7 +74,7 @@ def get_current_user(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
+
     statement = select(User).where(User.email == email)
     user = session.exec(statement).first()
     if not user:
@@ -76,16 +86,18 @@ def get_current_user(
 
 
 def get_user_role_names(session: Session, user_id: int) -> List[str]:
-    return list(session.exec(
-        select(Role.name)
-        .join(UserRole, UserRole.role_id == Role.id)
-        .where(UserRole.user_id == user_id)
-    ).all())
+    return list(
+        session.exec(
+            select(Role.name)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(UserRole.user_id == user_id)
+        ).all()
+    )
 
 
 def require_admin(
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ) -> User:
     """Dependency for content-management endpoints. Grant the role with:
     python make_admin.py your@email.com"""
@@ -98,7 +110,9 @@ def require_admin(
 
 
 # --- Endpoints ---
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 def register(user_data: UserRegister, session: Session = Depends(get_session)):
     """Register a new user"""
     # Check if user already exists
@@ -107,14 +121,14 @@ def register(user_data: UserRegister, session: Session = Depends(get_session)):
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is already registered"
+            detail="Email is already registered",
         )
-    
+
     # Create new user
     new_user = User(
         email=user_data.email,
         password_hash=hash_password(user_data.password),
-        full_name=user_data.full_name
+        full_name=user_data.full_name,
     )
     session.add(new_user)
     session.commit()
@@ -133,7 +147,7 @@ def login(credentials: UserLogin, session: Session = Depends(get_session)):
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Generate token
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
@@ -142,7 +156,7 @@ def login(credentials: UserLogin, session: Session = Depends(get_session)):
 @router.get("/me", response_model=MeResponse)
 def get_me(
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
     """Retrieve details (including roles) of the currently authenticated user"""
     return MeResponse(

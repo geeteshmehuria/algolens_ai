@@ -3,10 +3,11 @@ from datetime import datetime, date
 from typing import Optional, List, Dict, Any
 from sqlmodel import SQLModel, Field, Relationship, Column, JSON, UniqueConstraint
 
+
 # --- USER MODULE ---
 class User(SQLModel, table=True):
     __tablename__ = "users"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     full_name: Optional[str] = Field(default=None, max_length=150)
     email: str = Field(unique=True, index=True, max_length=255)
@@ -40,7 +41,7 @@ class UserRole(SQLModel, table=True):
 # --- TOPIC & PATTERN MODULES ---
 class DSATopic(SQLModel, table=True):
     __tablename__ = "dsa_topics"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(unique=True, index=True, max_length=100)
     description: Optional[str] = Field(default=None)
@@ -53,7 +54,7 @@ class DSATopic(SQLModel, table=True):
 
 class DSAPattern(SQLModel, table=True):
     __tablename__ = "dsa_patterns"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     topic_id: int = Field(foreign_key="dsa_topics.id")
     name: str = Field(max_length=150)
@@ -68,7 +69,7 @@ class DSAPattern(SQLModel, table=True):
 # --- PROBLEM MODULES ---
 class DSAProblem(SQLModel, table=True):
     __tablename__ = "dsa_problems"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     leetcode_slug: Optional[str] = Field(default=None, max_length=255)
     leetcode_url: Optional[str] = Field(default=None)
@@ -87,7 +88,9 @@ class DSAProblem(SQLModel, table=True):
     topic: DSATopic = Relationship(back_populates="problems")
     pattern: DSAPattern = Relationship(back_populates="problems")
     solutions: List["ProblemSolution"] = Relationship(back_populates="problem")
-    animation_steps: List["ProblemAnimationStep"] = Relationship(back_populates="problem")
+    animation_steps: List["ProblemAnimationStep"] = Relationship(
+        back_populates="problem"
+    )
     attempts: List["ProblemAttempt"] = Relationship(back_populates="problem")
     hints: List["AIHint"] = Relationship(back_populates="problem")
     revisions: List["RevisionQueue"] = Relationship(back_populates="problem")
@@ -95,7 +98,7 @@ class DSAProblem(SQLModel, table=True):
 
 class ProblemSolution(SQLModel, table=True):
     __tablename__ = "problem_solutions"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     problem_id: int = Field(foreign_key="dsa_problems.id")
     approach_type: str = Field(max_length=50)  # e.g., 'Brute Force', 'Optimized'
@@ -111,7 +114,7 @@ class ProblemSolution(SQLModel, table=True):
 
 class ProblemAnimationStep(SQLModel, table=True):
     __tablename__ = "problem_animation_steps"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     problem_id: int = Field(foreign_key="dsa_problems.id")
     animation_type: str = Field(max_length=100)  # e.g., 'hash_map_array', 'stack'
@@ -128,7 +131,7 @@ class ProblemAnimationStep(SQLModel, table=True):
 # --- ATTEMPT MODULES ---
 class ProblemAttempt(SQLModel, table=True):
     __tablename__ = "problem_attempts"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id")
     problem_id: int = Field(foreign_key="dsa_problems.id")
@@ -148,7 +151,7 @@ class ProblemAttempt(SQLModel, table=True):
 
 class AICodeReview(SQLModel, table=True):
     __tablename__ = "ai_code_reviews"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     attempt_id: int = Field(foreign_key="problem_attempts.id")
     is_correct: bool
@@ -173,8 +176,11 @@ class AIGeneratedContent(SQLModel, table=True):
     Generated once via Gemini, then served to every user from the database
     so repeat requests cost zero AI tokens.
     """
+
     __tablename__ = "ai_generated_content"
-    __table_args__ = (UniqueConstraint("problem_id", "kind", name="uq_ai_content_problem_kind"),)
+    __table_args__ = (
+        UniqueConstraint("problem_id", "kind", name="uq_ai_content_problem_kind"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     problem_id: int = Field(foreign_key="dsa_problems.id", index=True)
@@ -186,7 +192,7 @@ class AIGeneratedContent(SQLModel, table=True):
 
 class AIHint(SQLModel, table=True):
     __tablename__ = "ai_hints"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id")
     problem_id: int = Field(foreign_key="dsa_problems.id")
@@ -202,7 +208,9 @@ class AIHint(SQLModel, table=True):
 # --- USER LEARNING STATE ---
 class UserBookmark(SQLModel, table=True):
     __tablename__ = "user_bookmarks"
-    __table_args__ = (UniqueConstraint("user_id", "problem_id", name="uq_bookmark_user_problem"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "problem_id", name="uq_bookmark_user_problem"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id", index=True)
@@ -212,7 +220,9 @@ class UserBookmark(SQLModel, table=True):
 
 class UserNote(SQLModel, table=True):
     __tablename__ = "user_notes"
-    __table_args__ = (UniqueConstraint("user_id", "problem_id", name="uq_note_user_problem"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "problem_id", name="uq_note_user_problem"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id", index=True)
@@ -225,26 +235,33 @@ class UserNote(SQLModel, table=True):
 class UserProblemProgress(SQLModel, table=True):
     """Per-user, per-problem learning state (currently self-rated confidence;
     a natural home for future fields like status or last_reviewed)."""
+
     __tablename__ = "user_problem_progress"
-    __table_args__ = (UniqueConstraint("user_id", "problem_id", name="uq_progress_user_problem"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "problem_id", name="uq_progress_user_problem"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id", index=True)
     problem_id: int = Field(foreign_key="dsa_problems.id")
-    confidence: Optional[int] = Field(default=None, ge=1, le=5)  # 1 = relearn, 5 = interview-ready
+    confidence: Optional[int] = Field(
+        default=None, ge=1, le=5
+    )  # 1 = relearn, 5 = interview-ready
     updated_on: datetime = Field(default_factory=datetime.utcnow)
 
 
 # --- REVISION QUEUE ---
 class RevisionQueue(SQLModel, table=True):
     __tablename__ = "revision_queue"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id")
     problem_id: int = Field(foreign_key="dsa_problems.id")
     due_date: date
     reason: Optional[str] = Field(default=None, max_length=100)
-    status: str = Field(default="pending", max_length=30)  # e.g., 'pending', 'completed'
+    status: str = Field(
+        default="pending", max_length=30
+    )  # e.g., 'pending', 'completed'
     created_on: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
@@ -255,7 +272,7 @@ class RevisionQueue(SQLModel, table=True):
 # --- ROADMAP & SYNC MODULES ---
 class LearningRoadmap(SQLModel, table=True):
     __tablename__ = "learning_roadmaps"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id")
     title: Optional[str] = Field(default=None, max_length=255)
@@ -268,7 +285,7 @@ class LearningRoadmap(SQLModel, table=True):
 
 class LeetCodeProfileSync(SQLModel, table=True):
     __tablename__ = "leetcode_profile_sync"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id")
     leetcode_username: str = Field(max_length=100)
@@ -284,9 +301,12 @@ class LeetCodeProfileSync(SQLModel, table=True):
 
 # --- TOPIC NOTES MODULE ---
 
+
 class TopicNote(SQLModel, table=True):
     __tablename__ = "topic_notes"
-    __table_args__ = (UniqueConstraint("topic_id", "version", name="uq_topic_notes_topic_version"),)
+    __table_args__ = (
+        UniqueConstraint("topic_id", "version", name="uq_topic_notes_topic_version"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     topic_id: int = Field(foreign_key="dsa_topics.id", index=True)
@@ -308,7 +328,9 @@ class TopicNote(SQLModel, table=True):
 
 class TopicQuizQuestion(SQLModel, table=True):
     __tablename__ = "topic_quiz_questions"
-    __table_args__ = (UniqueConstraint("note_id", "position", name="uq_quiz_questions_note_position"),)
+    __table_args__ = (
+        UniqueConstraint("note_id", "position", name="uq_quiz_questions_note_position"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     note_id: int = Field(foreign_key="topic_notes.id", ondelete="CASCADE")
@@ -334,12 +356,16 @@ class UserQuizAttempt(SQLModel, table=True):
 
 class UserTopicNoteState(SQLModel, table=True):
     __tablename__ = "user_topic_note_state"
-    __table_args__ = (UniqueConstraint("user_id", "topic_id", name="uq_user_topic_note_state"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "topic_id", name="uq_user_topic_note_state"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id", index=True)
     topic_id: int = Field(foreign_key="dsa_topics.id")
-    status: str = Field(default="reading", max_length=20)  # 'reading', 'completed', 'revised'
+    status: str = Field(
+        default="reading", max_length=20
+    )  # 'reading', 'completed', 'revised'
     completed_sections: List[str] = Field(default=[], sa_column=Column(JSON))
     checklist_state: Dict[str, bool] = Field(default={}, sa_column=Column(JSON))
     is_bookmarked: bool = Field(default=False)
@@ -361,4 +387,3 @@ class AINoteGenerationLog(SQLModel, table=True):
     output_tokens: Optional[int] = Field(default=None)
     latency_ms: Optional[int] = Field(default=None)
     created_on: datetime = Field(default_factory=datetime.utcnow)
-

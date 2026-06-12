@@ -36,7 +36,7 @@
 	onMount(() => {
 		const token = localStorage.getItem('token');
 		const storedUser = localStorage.getItem('user');
-		
+
 		if (storedUser) {
 			try {
 				user = JSON.parse(storedUser);
@@ -143,7 +143,7 @@
 					{/if}
 				</div>
 			</header>
-			
+
 			<main class="p-8 flex-1">
 				{@render children()}
 			</main>
