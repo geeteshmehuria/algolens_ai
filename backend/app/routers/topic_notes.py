@@ -1,4 +1,5 @@
 # app/routers/topic_notes.py
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
@@ -23,6 +24,20 @@ from app.services.ai_service import AIGenerationError, AIUnavailableError
 from pydantic import BaseModel
 
 router = APIRouter(tags=["Topic Notes"])
+
+logger = logging.getLogger(__name__)
+
+
+def _ai_http_error(exc: Exception) -> HTTPException:
+    """Map AI service errors to HTTP without leaking provider internals."""
+    if isinstance(exc, AIUnavailableError):
+        return HTTPException(status_code=503, detail=str(exc))
+    logger.error("AI generation failed: %s", exc, exc_info=True)
+    return HTTPException(
+        status_code=502,
+        detail="AI response could not be generated right now. Please try again.",
+    )
+
 
 # --- Request Schemas ---
 
@@ -170,10 +185,8 @@ def generate_notes_endpoint(
                 "chunks_succeeded": 3,
             },
         }
-    except AIUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    except AIGenerationError as exc:
-        raise HTTPException(status_code=502, detail=str(exc))
+    except (AIUnavailableError, AIGenerationError) as exc:
+        raise _ai_http_error(exc)
 
 
 @router.post("/topics/{topic_id}/notes/regenerate", status_code=201)
@@ -196,10 +209,8 @@ def regenerate_notes_endpoint(
                 "chunks_succeeded": 3,
             },
         }
-    except AIUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    except AIGenerationError as exc:
-        raise HTTPException(status_code=502, detail=str(exc))
+    except (AIUnavailableError, AIGenerationError) as exc:
+        raise _ai_http_error(exc)
 
 
 @router.get("/topics/{topic_id}/notes/versions")
@@ -527,10 +538,8 @@ def generate_quiz_endpoint(
     try:
         questions = generate_topic_quiz(session, note_id, current_user.id)
         return {"detail": f"Successfully generated {len(questions)} quiz questions."}
-    except AIUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    except AIGenerationError as exc:
-        raise HTTPException(status_code=502, detail=str(exc))
+    except (AIUnavailableError, AIGenerationError) as exc:
+        raise _ai_http_error(exc)
 
 
 @router.get("/topic-notes/{note_id}/quiz")
@@ -607,7 +616,7 @@ def submit_quiz(
         )
         return {"score": attempt.score, "total": attempt.total, "results": results}
     except AIUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise _ai_http_error(exc)
 
 
 @router.get("/me/topic-notes")

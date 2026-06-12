@@ -1,4 +1,6 @@
 # app/routers/ai.py
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from pydantic import BaseModel
@@ -20,6 +22,8 @@ from app.services.ai_service import AIUnavailableError, AIGenerationError
 from app.services.progress_service import schedule_revision
 
 router = APIRouter(prefix="/ai", tags=["Google Gemini AI"])
+
+logger = logging.getLogger(__name__)
 
 
 # --- Pydantic Schemas ---
@@ -59,10 +63,17 @@ def _get_cached(
 
 def _ai_error(exc: Exception) -> HTTPException:
     if isinstance(exc, AIUnavailableError):
+        # Configuration guidance — safe and useful to show
         return HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
         )
-    return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    # Provider errors can carry internal details (paths, quotas, stack hints):
+    # full detail goes to the server log, the client gets a generic message.
+    logger.error("AI generation failed: %s", exc, exc_info=True)
+    return HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail="AI response could not be generated right now. Please try again.",
+    )
 
 
 # --- Endpoints ---

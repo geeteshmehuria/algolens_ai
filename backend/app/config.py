@@ -1,6 +1,36 @@
 # app/config.py
+import logging
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+
+def _clear_stale_tls_env() -> None:
+    """Drop TLS override env vars that point at files which no longer exist.
+
+    A leftover SSL_CERT_FILE from an uninstalled tool (e.g. Miniconda's
+    cacert.pem) makes every TLS client in the process — httpx (Gemini),
+    smtplib (password-reset email) — fail with FileNotFoundError. A path
+    that doesn't exist provides no security; removing it process-locally
+    restores the default certifi/system trust store.
+    """
+    for var in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"):
+        path = os.environ.get(var)
+        if path and not os.path.isfile(path):
+            logger.warning(
+                "Ignoring %s=%s — file does not exist; using default CA bundle",
+                var,
+                path,
+            )
+            del os.environ[var]
+    cert_dir = os.environ.get("SSL_CERT_DIR")
+    if cert_dir and not os.path.isdir(cert_dir):
+        logger.warning("Ignoring SSL_CERT_DIR=%s — directory does not exist", cert_dir)
+        del os.environ["SSL_CERT_DIR"]
+
+
+_clear_stale_tls_env()
 
 
 class Settings(BaseSettings):

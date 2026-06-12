@@ -8,11 +8,15 @@ honest HTTP errors instead of serving fake data.
 """
 
 import json
+import logging
 import re
+import time
 from typing import Any, Dict, Optional
 
 from app.config import settings
 from app.models import DSAProblem
+
+logger = logging.getLogger(__name__)
 
 
 class AIUnavailableError(Exception):
@@ -76,37 +80,105 @@ def _get_client():
     if _client is None:
         from google import genai
 
-        _client = genai.Client(api_key=settings.GOOGLE_GEMINI_API_KEY)
+        _client = genai.Client(
+            api_key=settings.GOOGLE_GEMINI_API_KEY,
+            http_options={"timeout": 90_000},  # ms — generation can be slow
+        )
     return _client
 
 
+# HTTP codes worth retrying: rate limit + transient server errors
+_TRANSIENT_CODES = {429, 500, 502, 503, 504}
+_MAX_ATTEMPTS = 3
+
+
+def _call_gemini(prompt: str, temperature: float) -> str:
+    """One Gemini text call with retry/backoff on transient failures.
+
+    Returns raw response text; raises AIGenerationError otherwise. The
+    error message may contain provider details — routers must log it
+    server-side and send the frontend a generic message.
+    """
+    client = _get_client()
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json",
+                    "temperature": temperature,
+                },
+            )
+            text = response.text or ""
+            if not text.strip():
+                # None/empty text usually means a safety block or empty candidate
+                raise AIGenerationError(
+                    "Gemini returned an empty response (possibly safety-blocked)."
+                )
+            return text
+        except AIGenerationError:
+            raise
+        except Exception as exc:
+            code = getattr(exc, "code", None) or getattr(
+                getattr(exc, "response", None), "status_code", None
+            )
+            transient = (
+                code in _TRANSIENT_CODES or "timeout" in type(exc).__name__.lower()
+            )
+            if transient and attempt < _MAX_ATTEMPTS:
+                wait = 2 ** (attempt - 1)
+                logger.warning(
+                    "Transient Gemini error (attempt %d/%d, retrying in %ds): %s",
+                    attempt,
+                    _MAX_ATTEMPTS,
+                    wait,
+                    exc,
+                )
+                time.sleep(wait)
+                continue
+            logger.exception("Gemini request failed")
+            raise AIGenerationError(f"Gemini request failed: {exc}") from exc
+    raise AIGenerationError("Gemini request failed after retries.")  # unreachable
+
+
+def _strip_fences(text: str) -> str:
+    # Strip markdown fences if the model added them despite the mime type.
+    return re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
+
+
 def _generate_json(prompt: str, temperature: float = 0.3) -> Dict[str, Any]:
-    """Call Gemini asking for JSON and parse it defensively."""
+    """Call Gemini asking for JSON and parse it defensively.
+
+    Invalid JSON gets one correction round before giving up — never more,
+    to bound token spend."""
     if not ai_available():
         raise AIUnavailableError(
             "AI features are disabled. Set GOOGLE_GEMINI_API_KEY in backend/.env "
             "(get a free key at https://aistudio.google.com/)."
         )
+    text = _strip_fences(_call_gemini(prompt, temperature))
     try:
-        client = _get_client()
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-            config={
-                "response_mime_type": "application/json",
-                "temperature": temperature,
-            },
+        return json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning(
+            "Gemini returned invalid JSON (starts with %r) — retrying once "
+            "with a correction prompt",
+            text[:80],
         )
-        text = response.text or ""
-    except Exception as exc:  # network, quota, auth — surface as one error type
-        raise AIGenerationError(f"Gemini request failed: {exc}") from exc
-
-    # Strip markdown fences if the model added them despite the mime type.
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
+    correction = (
+        f"{prompt}\n\n"
+        f"IMPORTANT: your previous response was not valid JSON (it began with: "
+        f"{text[:200]!r}). Return ONLY the complete, corrected, valid JSON "
+        f"object — no markdown fences, no text outside the JSON."
+    )
+    text = _strip_fences(_call_gemini(correction, temperature))
     try:
         return json.loads(text)
     except json.JSONDecodeError as exc:
-        raise AIGenerationError(f"Gemini returned invalid JSON: {text[:200]}") from exc
+        raise AIGenerationError(
+            f"Gemini returned invalid JSON after retry: {text[:200]}"
+        ) from exc
 
 
 def _problem_context(
