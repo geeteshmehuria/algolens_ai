@@ -331,8 +331,8 @@
 					<!-- Global Settings -->
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-slate-100 pb-5">
 						<div class="flex flex-col gap-1.5">
-							<label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Level Parameter</label>
-							<select bind:value={level} class="text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white outline-none">
+							<label for="level-parameter" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Level Parameter</label>
+							<select id="level-parameter" bind:value={level} class="text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white outline-none">
 								<option value="beginner_to_intermediate">Beginner to Intermediate</option>
 								<option value="intermediate_to_advanced">Intermediate to Advanced</option>
 								<option value="absolute_beginner">Absolute Beginner</option>
@@ -351,8 +351,9 @@
 								</div>
 
 								<div class="flex flex-col gap-1">
-									<label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Content Markdown</label>
+									<label for="content-md-{idx}" class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Content Markdown</label>
 									<textarea
+										id="content-md-{idx}"
 										value={section.content_md}
 										oninput={(e) => handleContentSectionChange(idx, 'content_md', e.currentTarget.value)}
 										class="w-full h-32 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-800 font-mono leading-relaxed outline-none focus:border-blue-400 bg-slate-50/50"

@@ -38,6 +38,22 @@ class UserRole(SQLModel, table=True):
     role_id: int = Field(foreign_key="roles.id", primary_key=True)
 
 
+class PasswordResetToken(SQLModel, table=True):
+    """Single-use, expiring password-reset token. Only the SHA-256 hash of
+    the raw token is stored — the raw value exists only in the emailed link."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    token_hash: str = Field(unique=True, index=True, max_length=64)
+    expires_on: datetime
+    used_on: Optional[datetime] = Field(default=None)
+    created_on: datetime = Field(default_factory=datetime.utcnow)
+    created_ip: Optional[str] = Field(default=None, max_length=45)
+    user_agent: Optional[str] = Field(default=None, max_length=255)
+
+
 # --- TOPIC & PATTERN MODULES ---
 class DSATopic(SQLModel, table=True):
     __tablename__ = "dsa_topics"

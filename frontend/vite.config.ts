@@ -18,5 +18,12 @@ export default defineConfig({
 			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 			adapter: adapter()
 		})
-	]
+	],
+	server: {
+		watch: {
+			// Playwright writes artifacts mid-run; reloading on them detaches
+			// the DOM under test
+			ignored: ['**/test-results/**', '**/playwright-report/**', '**/e2e/**']
+		}
+	}
 });

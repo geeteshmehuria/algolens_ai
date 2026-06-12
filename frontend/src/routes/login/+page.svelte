@@ -19,6 +19,9 @@
 		if (localStorage.getItem('token')) {
 			goto('/dashboard');
 		}
+		if (new URLSearchParams(window.location.search).get('reset') === 'success') {
+			successMessage = 'Password reset successful! Please log in with your new password.';
+		}
 	});
 
 	async function handleSubmit(event: SubmitEvent) {
@@ -113,7 +116,12 @@
 				</div>
 
 				<div class="flex flex-col gap-1.5">
-					<Label for="password" class="text-slate-600">Password</Label>
+					<div class="flex items-center justify-between">
+						<Label for="password" class="text-slate-600">Password</Label>
+						{#if isLogin}
+							<a href="/forgot-password" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Forgot password?</a>
+						{/if}
+					</div>
 					<Input type="password" id="password" bind:value={password} required placeholder="••••••••" class="h-10 border-slate-200" />
 				</div>
 

@@ -10,24 +10,45 @@ export class ApiError extends Error {
 	}
 }
 
-export async function api<T = any>(path: string, options: RequestInit = {}): Promise<T> {
-	const token = localStorage.getItem('token');
-	const headers: Record<string, string> = {
-		'Content-Type': 'application/json',
-		...((options.headers as Record<string, string>) ?? {})
-	};
-	if (token) headers['Authorization'] = `Bearer ${token}`;
+const inflightRequests = new Map<string, Promise<any>>();
 
-	const res = await fetch(`${API_BASE}/api${path}`, { ...options, headers });
-	if (!res.ok) {
-		let detail = `Request failed (${res.status})`;
-		try {
-			const body = await res.json();
-			if (body?.detail) detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
-		} catch {
-			// non-JSON error body — keep generic message
-		}
-		throw new ApiError(detail, res.status);
+export async function api<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+	const method = (options.method ?? 'GET').toUpperCase();
+	const isGet = method === 'GET';
+	const key = isGet ? path : null;
+
+	if (key && inflightRequests.has(key)) {
+		return inflightRequests.get(key) as Promise<T>;
 	}
-	return res.json();
+
+	const promise = (async () => {
+		const token = localStorage.getItem('token');
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			...((options.headers as Record<string, string>) ?? {})
+		};
+		if (token) headers['Authorization'] = `Bearer ${token}`;
+
+		const res = await fetch(`${API_BASE}/api${path}`, { ...options, headers });
+		if (!res.ok) {
+			let detail = `Request failed (${res.status})`;
+			try {
+				const body = await res.json();
+				if (body?.detail) detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+			} catch {
+				// non-JSON error body — keep generic message
+			}
+			throw new ApiError(detail, res.status);
+		}
+		return res.json();
+	})();
+
+	if (key) {
+		inflightRequests.set(key, promise);
+		promise.finally(() => {
+			inflightRequests.delete(key);
+		});
+	}
+
+	return promise;
 }

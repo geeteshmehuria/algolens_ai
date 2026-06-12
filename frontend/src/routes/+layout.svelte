@@ -9,6 +9,9 @@
 
 	let { children } = $props();
 
+	// Pages reachable without a session — rendered bare, never auth-redirected
+	const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
+
 	let isAuthenticated = $state(false);
 	let user = $state<{ full_name?: string; email?: string } | null>(null);
 	let loading = $state(true);
@@ -34,33 +37,39 @@
 	}
 
 	onMount(() => {
-		const token = localStorage.getItem('token');
-		const storedUser = localStorage.getItem('user');
-
-		if (storedUser) {
-			try {
-				user = JSON.parse(storedUser);
-			} catch (e) {
-				localStorage.removeItem('user');
-			}
-		}
-
-		if (token) {
-			isAuthenticated = true;
-			api<{ streak: number }>('/dashboard/summary')
-				.then((summary) => (streak = summary.streak))
-				.catch(() => (streak = null));
-		} else {
-			isAuthenticated = false;
-			if (page.url.pathname !== '/login') {
-				goto('/login');
-			}
-		}
 		loading = false;
 	});
 
 	$effect(() => {
-		if (!loading && !isAuthenticated && page.url.pathname !== '/login') {
+		// Track pathname to re-run authentication check when navigating
+		const pathname = page.url.pathname;
+		const token = localStorage.getItem('token');
+		const storedUser = localStorage.getItem('user');
+
+		if (token) {
+			isAuthenticated = true;
+			if (storedUser) {
+				try {
+					user = JSON.parse(storedUser);
+				} catch (e) {
+					localStorage.removeItem('user');
+				}
+			}
+			// Fetch streak if not loaded yet
+			if (streak === null) {
+				api<{ streak: number }>('/dashboard/summary')
+					.then((summary) => (streak = summary.streak))
+					.catch(() => (streak = null));
+			}
+		} else {
+			isAuthenticated = false;
+			user = null;
+			streak = null;
+		}
+	});
+
+	$effect(() => {
+		if (!loading && !isAuthenticated && !publicRoutes.includes(page.url.pathname)) {
 			goto('/login');
 		}
 	});
@@ -75,7 +84,7 @@
 	<div class="flex items-center justify-center h-screen bg-slate-50">
 		<div class="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-blue-600"></div>
 	</div>
-{:else if page.url.pathname === '/login'}
+{:else if publicRoutes.includes(page.url.pathname)}
 	{@render children()}
 {:else}
 	<div class="flex min-h-screen bg-slate-50 text-slate-900">

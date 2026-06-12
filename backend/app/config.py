@@ -12,6 +12,25 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
+    # Password reset
+    FRONTEND_URL: str = "http://localhost:5173"
+    RESET_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # 'development' falls back to logging reset links locally when SMTP is
+    # not configured; any other value requires working SMTP settings
+    ENVIRONMENT: str = "development"
+
+    # SMTP email delivery. When all four required values are set, real
+    # emails are sent (in every environment). Gmail example:
+    #   SMTP_HOST=smtp.gmail.com, SMTP_PORT=587,
+    #   SMTP_USERNAME=you@gmail.com, SMTP_PASSWORD=<16-char App Password>
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587  # 587 = STARTTLS, 465 = implicit SSL
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""  # defaults to SMTP_USERNAME when empty
+    SMTP_FROM_NAME: str = "AlgoLens AI"
+
     # AI Configuration (Google Gemini)
     GOOGLE_GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"

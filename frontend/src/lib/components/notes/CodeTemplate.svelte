@@ -76,18 +76,33 @@
 				{@const hasExplanation = explanation !== null}
 				{@const isSelected = selectedLineIndex === lineNum}
 
-				<div
-					onclick={() => { if (hasExplanation) selectedLineIndex = isSelected ? null : lineNum; }}
-					class="flex py-0.5 w-full cursor-default select-none border-l-3 transition-colors {isSelected ? 'bg-blue-950/45 border-blue-500' : hasExplanation ? 'hover:bg-slate-900/60 border-slate-700/30' : 'border-transparent'}"
-				>
-					<span class="w-10 text-right pr-3.5 text-slate-600 font-bold text-[10px] select-none flex items-center justify-end gap-1">
-						{#if hasExplanation}
+				{#if hasExplanation}
+					<div
+						role="button"
+						tabindex="0"
+						onclick={() => { selectedLineIndex = isSelected ? null : lineNum; }}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								e.preventDefault();
+								selectedLineIndex = isSelected ? null : lineNum;
+							}
+						}}
+						class="flex py-0.5 w-full cursor-pointer select-none border-l-3 transition-colors {isSelected ? 'bg-blue-950/45 border-blue-500' : 'hover:bg-slate-900/60 border-slate-700/30'}"
+					>
+						<span class="w-10 text-right pr-3.5 text-slate-600 font-bold text-[10px] select-none flex items-center justify-end gap-1">
 							<span class="text-[9px] text-blue-400 hover:text-blue-300">ℹ</span>
-						{/if}
-						<span>{lineNum}</span>
-					</span>
-					<span class="text-slate-300 whitespace-pre">{line}</span>
-				</div>
+							<span>{lineNum}</span>
+						</span>
+						<span class="text-slate-300 whitespace-pre">{line}</span>
+					</div>
+				{:else}
+					<div class="flex py-0.5 w-full cursor-default select-none border-l-3 transition-colors border-transparent">
+						<span class="w-10 text-right pr-3.5 text-slate-600 font-bold text-[10px] select-none flex items-center justify-end gap-1">
+							<span>{lineNum}</span>
+						</span>
+						<span class="text-slate-300 whitespace-pre">{line}</span>
+					</div>
+				{/if}
 			{/each}
 		</div>
 
