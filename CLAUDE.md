@@ -49,6 +49,8 @@ Get-CimInstance Win32_Process | Where-Object { $_.Name -match "python" } | Selec
 
 and kill any worker whose parent is dead. Note `.env` changes are never hot-reloaded — `--reload` watches `.py` files only; restart the server after editing `.env`.
 
+Related: terminals descended from old conda shells may carry a stale `SSL_CERT_FILE` pointing into the deleted `C:\Users\HP\Miniconda3` — that breaks **every** TLS client in the process (Gemini via httpx, SMTP) with `[Errno 2] No such file or directory`. `app/config.py` runs `_clear_stale_tls_env()` at import to drop TLS override vars whose paths no longer exist (logged as a warning); keep that guard when touching config.
+
 ## Architecture
 
 ### Backend layering
@@ -57,7 +59,7 @@ Routers (`app/routers/`) are thin; business logic lives in `app/services/`. All 
 
 Key services:
 
-- **`ai_service.py`** — all Gemini calls go through `_generate_json` (JSON mime type, fence-stripping, parse). Raises `AIUnavailableError` (no API key → routers return 503) or `AIGenerationError` (bad response → 502). **Never return fake/placeholder content when AI fails** — honest errors are a deliberate design rule. `ANIMATION_CONTRACTS` defines the per-type step JSON shape.
+- **`ai_service.py`** — all Gemini calls go through `_generate_json`: JSON mime type, 90s timeout, retry with backoff (3 attempts) on 429/5xx/timeouts (fail-fast on auth errors), empty/safety-blocked responses raise, and invalid JSON gets exactly **one** correction-prompt retry (bounded token spend). Raises `AIUnavailableError` (no API key → routers return 503 with setup guidance) or `AIGenerationError` (→ 502). **Routers must map these via the local `_ai_error`/`_ai_http_error` helpers** — provider error text can contain internal details, so it goes to the server log while clients get a generic "try again" message. **Never return fake/placeholder content when AI fails** — honest errors are a deliberate design rule. `ANIMATION_CONTRACTS` defines the per-type step JSON shape.
 - **`step_generators.py`** — instrumented real algorithm implementations (binary search, two pointers, stack) that emit animation steps deterministically. The animation endpoint prefers these over Gemini; they must conform to `ANIMATION_CONTRACTS`.
 - **`note_service.py`** — AI topic notes: generation is **chunked** (learn/apply/retain + separate quiz) with per-chunk Pydantic validation and retry; never persist a partial note. Notes are versioned rows in `topic_notes` with a draft → published workflow; a partial unique index enforces one published note per topic.
 - **`progress_service.py`** — spaced repetition (`REVISION_INTERVALS = [3, 7, 16, 35]` days), streak calculation (**anchored on UTC dates** because `created_on` is `utcnow` — do not use local `date.today()` here), topic proficiency (60% solve rate + 40% avg AI review score), problem recommendations.
