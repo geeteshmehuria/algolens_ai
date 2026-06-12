@@ -56,7 +56,6 @@
 	let problem = $state<Problem | null>(null);
 	let loading = $state(true);
 	let activeTab = $state('logic');
-	let token = $state('');
 
 	// Code editor state
 	let submittedCode = $state('');
@@ -86,19 +85,13 @@
 
 	// Fetch Data
 	onMount(async () => {
-		const storedToken = localStorage.getItem('token');
-		if (!storedToken) {
+		if (!localStorage.getItem('token')) {
 			goto('/login');
 			return;
 		}
-		token = storedToken;
 
 		try {
-			const res = await fetch(`http://localhost:8000/api/problems/${problemId}`, {
-				headers: { 'Authorization': `Bearer ${token}` }
-			});
-			if (!res.ok) throw new Error('Problem not found');
-			const data = await res.json();
+			const data = await api(`/problems/${problemId}`);
 			problem = data;
 			submittedCode = data.starter_code || 'def solve(nums, target):\n    # Write your Python code here\n    pass';
 

@@ -320,3 +320,33 @@ def get_me(
         created_on=current_user.created_on,
         roles=get_user_role_names(session, current_user.id),
     )
+
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    leetcode_username: Optional[str] = None
+
+
+@router.put("/me", response_model=MeResponse)
+def update_me(
+    payload: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Update profile fields. Email and password are deliberately excluded —
+    email is the login identity and password changes go through reset."""
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name.strip()[:150] or None
+    if payload.leetcode_username is not None:
+        current_user.leetcode_username = payload.leetcode_username.strip()[:100] or None
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    return MeResponse(
+        id=current_user.id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        leetcode_username=current_user.leetcode_username,
+        created_on=current_user.created_on,
+        roles=get_user_role_names(session, current_user.id),
+    )

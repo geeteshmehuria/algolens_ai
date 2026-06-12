@@ -49,6 +49,7 @@ backend/scratch/
 !backend/scratch/.gitkeep
 frontend/test-results/
 frontend/playwright-report/
+testing-agent/reports/screenshots/
 
 # IDEs and OS
 .vscode/

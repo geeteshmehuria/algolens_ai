@@ -1,0 +1,98 @@
+{
+  "generated": "2026-06-13",
+  "environment": "local-dev (Windows 11, backend :8000, frontend :5173, PostgreSQL Aiven dev)",
+  "totals": {
+    "backend_tests": { "passed": 79, "failed": 0 },
+    "e2e_tests": { "passed": 30, "failed": 0 },
+    "svelte_check": { "errors": 0, "warnings": 0, "files": 824 },
+    "build": "success",
+    "pre_commit": "pass",
+    "bugs_found": 7,
+    "bugs_fixed": 7,
+    "bugs_remaining": 0
+  },
+  "bugs": [
+    {
+      "id": 1,
+      "priority": "high",
+      "area": "frontend/auth",
+      "file": "frontend/src/routes/settings/+page.svelte",
+      "problem": "Settings page bounced users without a localStorage 'user' entry to login",
+      "root_cause": "guard required cached 'user' instead of token + API",
+      "fix": "require token only; load profile from GET /api/auth/me",
+      "verified_by": "e2e site-smoke: authed /settings loads clean"
+    },
+    {
+      "id": 2,
+      "priority": "medium",
+      "area": "frontend+backend/API",
+      "file": "frontend/src/routes/settings/+page.svelte, backend/app/routers/auth.py",
+      "problem": "Save Changes faked success via setTimeout + localStorage; no profile endpoint existed",
+      "root_cause": "page was a mock; backend endpoint never built",
+      "fix": "new PUT /api/auth/me (full_name, leetcode_username only); real save + error state",
+      "verified_by": "tests/test_profile_update.py (5 tests)"
+    },
+    {
+      "id": 3,
+      "priority": "medium",
+      "area": "backend/email",
+      "file": "backend/app/services/email_service.py, app/config.py",
+      "problem": "E2E runs sent reset emails for fake @test.dev users through real Gmail SMTP",
+      "root_cause": "no test-recipient routing once SMTP was configured",
+      "fix": "dev-only EMAIL_DEV_OUTBOX_DOMAINS routes test domains to dev outbox",
+      "verified_by": "2 new unit tests + 13 forgot/reset e2e tests pass with SMTP configured"
+    },
+    {
+      "id": 4,
+      "priority": "medium",
+      "area": "frontend",
+      "file": "frontend/src/routes/problems/[id]/+page.svelte",
+      "problem": "raw fetch with hardcoded http://localhost:8000",
+      "root_cause": "page predates the api() helper",
+      "fix": "use api() helper; removed dead token state",
+      "verified_by": "svelte-check + problem detail e2e test"
+    },
+    {
+      "id": 5,
+      "priority": "medium",
+      "area": "tests",
+      "file": "backend/tests/test_auth_reset.py, backend/tests/test_email_service.py",
+      "problem": "19 tests missing from working tree and from commit fbfe874",
+      "root_cause": "files lost before/during user's commit",
+      "fix": "restored both files in full",
+      "verified_by": "pytest 79/79"
+    },
+    {
+      "id": 6,
+      "priority": "low",
+      "area": "UI/UX",
+      "file": "frontend/src/routes/dashboard/+page.svelte",
+      "problem": "Recommended Problems and Weak Topics panels rendered blank for new users",
+      "root_cause": "no {:else} empty states",
+      "fix": "added empty-state messages to both lists",
+      "verified_by": "svelte-check + dashboard e2e"
+    },
+    {
+      "id": 7,
+      "priority": "low",
+      "area": "database",
+      "file": "backend/migrations/versions/0005_hot_path_fk_indexes.py, app/models.py",
+      "problem": "hot-path FK columns unindexed (problem_attempts, dsa_problems, revision_queue, ai_hints)",
+      "root_cause": "indexes never added for live-computed dashboard queries",
+      "fix": "migration 0005 adds 8 indexes; models updated with index=True",
+      "verified_by": "alembic upgrade head + schema inspection"
+    }
+  ],
+  "advisories": [
+    "Catalog endpoints (/api/topics, /api/problems*) are publicly readable — confirm intentional",
+    "JWTs remain valid up to 24h after password reset — add token_version if revocation matters",
+    "No global rate limiting — add slowapi or proxy limits before production",
+    "JWT_SECRET in .env looks like a default — set a strong unique value for production",
+    "~15 cold-path FK columns remain unindexed — fine at current scale"
+  ],
+  "not_verified": [
+    "Live Gemini generation endpoints (mocked in tests)",
+    "LeetCode import action flow beyond page load",
+    "Live email delivery this run (verified previous session; code-level tests only here)"
+  ]
+}

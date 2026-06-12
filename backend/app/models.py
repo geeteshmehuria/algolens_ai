@@ -91,8 +91,8 @@ class DSAProblem(SQLModel, table=True):
     leetcode_url: Optional[str] = Field(default=None)
     title: str = Field(max_length=255)
     difficulty: str = Field(max_length=20)  # Easy, Medium, Hard
-    topic_id: int = Field(foreign_key="dsa_topics.id")
-    pattern_id: int = Field(foreign_key="dsa_patterns.id")
+    topic_id: int = Field(foreign_key="dsa_topics.id", index=True)
+    pattern_id: int = Field(foreign_key="dsa_patterns.id", index=True)
     description: str
     constraints_text: Optional[str] = Field(default=None)
     examples: List[Dict[str, Any]] = Field(default=[], sa_column=Column(JSON))
@@ -149,8 +149,8 @@ class ProblemAttempt(SQLModel, table=True):
     __tablename__ = "problem_attempts"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id")
-    problem_id: int = Field(foreign_key="dsa_problems.id")
+    user_id: int = Field(foreign_key="users.id", index=True)
+    problem_id: int = Field(foreign_key="dsa_problems.id", index=True)
     submitted_code: str
     status: str = Field(max_length=30)  # e.g., 'Correct', 'Incorrect', 'Reviewing'
     used_hint: bool = Field(default=False)
@@ -210,8 +210,8 @@ class AIHint(SQLModel, table=True):
     __tablename__ = "ai_hints"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id")
-    problem_id: int = Field(foreign_key="dsa_problems.id")
+    user_id: int = Field(foreign_key="users.id", index=True)
+    problem_id: int = Field(foreign_key="dsa_problems.id", index=True)
     hint_level: int
     hint_text: str
     created_on: datetime = Field(default_factory=datetime.utcnow)
@@ -271,8 +271,8 @@ class RevisionQueue(SQLModel, table=True):
     __tablename__ = "revision_queue"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id")
-    problem_id: int = Field(foreign_key="dsa_problems.id")
+    user_id: int = Field(foreign_key="users.id", index=True)
+    problem_id: int = Field(foreign_key="dsa_problems.id", index=True)
     due_date: date
     reason: Optional[str] = Field(default=None, max_length=100)
     status: str = Field(

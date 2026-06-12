@@ -60,8 +60,22 @@ def send_email(
             s.send_message(msg)
 
 
+def _dev_outbox_recipient(to_email: str) -> bool:
+    """In development, test-domain recipients bypass real SMTP so E2E runs
+    never send fake addresses through the real provider (bounces hurt
+    sender reputation)."""
+    if settings.ENVIRONMENT != "development":
+        return False
+    domains = [
+        d.strip().lower()
+        for d in settings.EMAIL_DEV_OUTBOX_DOMAINS.split(",")
+        if d.strip()
+    ]
+    return any(to_email.lower().endswith("@" + d) for d in domains)
+
+
 def send_password_reset_email(to_email: str, reset_link: str) -> None:
-    if smtp_configured():
+    if smtp_configured() and not _dev_outbox_recipient(to_email):
         minutes = settings.RESET_TOKEN_EXPIRE_MINUTES
         text_body = (
             "We received a request to reset your AlgoLens AI password.\n\n"

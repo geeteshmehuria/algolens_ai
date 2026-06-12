@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = ""  # defaults to SMTP_USERNAME when empty
     SMTP_FROM_NAME: str = "AlgoLens AI"
 
+    # In development, recipients on these domains (comma-separated) are
+    # written to the dev outbox instead of real SMTP, so E2E tests never
+    # push fake addresses through the real mail provider.
+    EMAIL_DEV_OUTBOX_DOMAINS: str = "test.dev"
+
     # AI Configuration (Google Gemini)
     GOOGLE_GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"

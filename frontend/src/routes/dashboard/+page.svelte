@@ -119,7 +119,7 @@
 						</CardDescription>
 					</CardHeader>
 					<CardContent class="flex flex-col gap-3">
-						{#each stats.recommended_problems as problem}
+						{#each stats.recommended_problems as problem (problem.id)}
 							<div class="flex items-center justify-between p-4 border border-slate-100 rounded-xl bg-slate-50/50 hover:border-slate-200 transition-all">
 								<div class="flex flex-col gap-1.5">
 									<span class="text-sm font-semibold text-slate-800">{problem.title}</span>
@@ -135,6 +135,10 @@
 										Solve
 									</Button>
 								</div>
+							</div>
+						{:else}
+							<div class="text-center text-sm text-slate-400 py-10">
+								No recommendations yet — solve a few problems and we'll suggest what to practice next.
 							</div>
 						{/each}
 					</CardContent>
@@ -164,6 +168,10 @@
 									<!-- Svelte shadcn progress element -->
 									<Progress value={topic.score} class="h-2 bg-slate-100 {topic.score < 50 ? '[&>div]:bg-rose-500' : topic.score < 75 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}" />
 								</div>
+							</div>
+						{:else}
+							<div class="text-center text-sm text-slate-400 py-10">
+								No data yet — your weak topics will appear here once you submit solutions.
 							</div>
 						{/each}
 					</CardContent>
