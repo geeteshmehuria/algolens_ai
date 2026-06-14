@@ -9,7 +9,15 @@ from pydantic import BaseModel, Field as PydanticField
 from typing import List, Optional
 
 from app.database import get_session
-from app.models import DSAProblem, DSATopic, UserBookmark, UserNote, UserProblemProgress
+from app.models import (
+    AICodeReview,
+    DSAProblem,
+    DSATopic,
+    ProblemAttempt,
+    UserBookmark,
+    UserNote,
+    UserProblemProgress,
+)
 from app.routers.auth import get_current_user, User
 
 router = APIRouter(tags=["User Problem State"])
@@ -28,6 +36,18 @@ class UserProblemState(BaseModel):
     bookmarked: bool
     note: Optional[str] = None
     confidence: Optional[int] = None
+
+
+class LatestAttempt(BaseModel):
+    """The user's most recent submission for a problem, used to rehydrate the
+    editor + AI-review panel on reopen (after refresh or re-login)."""
+
+    code: Optional[str] = None
+    language: str = "python"
+    status: Optional[str] = None
+    test_results: Optional[dict] = None
+    ai_review: Optional[dict] = None
+    created_on: Optional[datetime] = None
 
 
 # --- Helpers ---
@@ -70,6 +90,54 @@ def get_user_state(
         bookmarked=bookmark is not None,
         note=note.content if note else None,
         confidence=progress.confidence if progress else None,
+    )
+
+
+@router.get("/problems/{problem_id}/latest-attempt", response_model=LatestAttempt)
+def get_latest_attempt(
+    problem_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Most recent submission (code + AI review) so the solver can restore the
+    user's work on reopen. Returns empty fields when there's no attempt yet."""
+    _require_problem(session, problem_id)
+    attempt = session.exec(
+        select(ProblemAttempt)
+        .where(
+            ProblemAttempt.user_id == current_user.id,
+            ProblemAttempt.problem_id == problem_id,
+        )
+        .order_by(ProblemAttempt.created_on.desc())
+    ).first()
+    if not attempt:
+        return LatestAttempt()
+
+    review = session.exec(
+        select(AICodeReview)
+        .where(AICodeReview.attempt_id == attempt.id)
+        .order_by(AICodeReview.created_on.desc())
+    ).first()
+    ai_review = None
+    if review:
+        ai_review = {
+            "is_correct": review.is_correct,
+            "logic_feedback": review.logic_feedback,
+            "bugs": review.bugs,
+            "missed_edge_cases": review.missed_edge_cases,
+            "better_approach": review.better_approach,
+            "dsa_pattern": review.dsa_pattern,
+            "time_complexity": review.time_complexity,
+            "space_complexity": review.space_complexity,
+            "score": review.score,
+        }
+
+    return LatestAttempt(
+        code=attempt.submitted_code,
+        status=attempt.status,
+        test_results=getattr(attempt, "test_results", None),
+        ai_review=ai_review,
+        created_on=attempt.created_on,
     )
 
 

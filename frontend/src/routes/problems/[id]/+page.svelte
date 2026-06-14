@@ -110,10 +110,21 @@
 			problem = data;
 			submittedCode = data.starter_code || 'def solve(nums, target):\n    # Write your Python code here\n    pass';
 
-			const userState = await api(`/problems/${problemId}/user-state`);
+			// User state + latest attempt load together; the latest attempt restores
+			// the user's previously written code and AI review (persisted server-side),
+			// so reopening the problem after refresh/re-login resumes where they left off.
+			const [userState, latest] = await Promise.all([
+				api(`/problems/${problemId}/user-state`),
+				api<{ code?: string | null; ai_review?: CodeReview | null; status?: string | null }>(
+					`/problems/${problemId}/latest-attempt`
+				)
+			]);
 			isBookmarked = userState.bookmarked;
 			confidence = userState.confidence;
 			noteContent = userState.note ?? '';
+
+			if (latest.code) submittedCode = latest.code;
+			if (latest.ai_review) codeReview = latest.ai_review;
 		} catch (e) {
 			console.error(e);
 		} finally {
