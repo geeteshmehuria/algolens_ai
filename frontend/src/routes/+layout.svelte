@@ -2,7 +2,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { api } from '$lib/api';
@@ -12,9 +12,12 @@
 	// Pages reachable without a session — rendered bare, never auth-redirected
 	const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
 
-	let isAuthenticated = $state(false);
+	// Resolve auth synchronously at first render (SPA, ssr=false so localStorage is
+	// available) so the protected shell is NEVER rendered for a logged-out user —
+	// this is what prevents the dashboard "flash" before the login redirect.
+	let isAuthenticated = $state(browser && !!localStorage.getItem('token'));
+	const isPublic = $derived(publicRoutes.includes(page.url.pathname));
 	let user = $state<{ full_name?: string; email?: string } | null>(null);
-	let loading = $state(true);
 	let streak = $state<number | null>(null);
 	let revisionDue = $state(0);
 	let roles = $state<string[] | null>(null);
@@ -45,10 +48,6 @@
 		user = null;
 		goto('/login');
 	}
-
-	onMount(() => {
-		loading = false;
-	});
 
 	$effect(() => {
 		// Track pathname to re-run authentication check when navigating
@@ -91,7 +90,9 @@
 	});
 
 	$effect(() => {
-		if (!loading && !isAuthenticated && !publicRoutes.includes(page.url.pathname)) {
+		// Redirect logged-out users away from protected routes. The template never
+		// renders protected content in this state, so there's no flash.
+		if (!isPublic && !isAuthenticated) {
 			goto('/login');
 		}
 	});
@@ -108,13 +109,9 @@
 	<title>AlgoLens AI — Visual DSA learning platform</title>
 </svelte:head>
 
-{#if loading}
-	<div class="flex items-center justify-center h-screen bg-slate-50">
-		<div class="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-blue-600"></div>
-	</div>
-{:else if publicRoutes.includes(page.url.pathname)}
+{#if isPublic}
 	{@render children()}
-{:else}
+{:else if isAuthenticated}
 	<div class="flex min-h-screen bg-slate-50 text-slate-900">
 		<!-- Mobile overlay: dims content and closes the drawer on tap (lg+: hidden) -->
 		{#if sidebarOpen}
@@ -216,5 +213,11 @@
 				{/key}
 			</main>
 		</div>
+	</div>
+{:else}
+	<!-- Logged-out on a protected route: neutral splash while redirecting to
+	     /login. Never render protected content here (prevents the dashboard flash). -->
+	<div class="flex items-center justify-center h-screen bg-slate-50">
+		<div class="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-blue-600"></div>
 	</div>
 {/if}
