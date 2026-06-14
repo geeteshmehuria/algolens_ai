@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { api } from '$lib/api';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -26,7 +27,8 @@
 	let topics = $state<Topic[]>([]);
 	let filteredProblems = $state<Problem[]>([]);
 
-	let selectedTopic = $state('');
+	// Seed the topic filter from ?topic= so dashboard deep-links land pre-filtered.
+	let selectedTopic = $state(page.url.searchParams.get('topic') ?? '');
 	let selectedDifficulty = $state('');
 	let searchQuery = $state('');
 	let loading = $state(true);

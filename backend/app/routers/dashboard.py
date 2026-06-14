@@ -67,9 +67,10 @@ def get_dashboard_summary(
 
     streak = calculate_streak(session, current_user.id)
 
-    # Weakest 3 topics the user has actually attempted.
+    # Weakest 3 topics the user has actually attempted. topic_id lets the
+    # dashboard deep-link each row to the filtered problems list.
     weak_topics = [
-        {"topic_name": t["topic_name"], "score": t["score"]}
+        {"topic_id": t["topic_id"], "topic_name": t["topic_name"], "score": t["score"]}
         for t in compute_topic_proficiency(session, current_user.id)[:3]
     ]
 

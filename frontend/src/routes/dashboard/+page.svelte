@@ -15,7 +15,7 @@
 		attempted_count: number;
 		streak: number;
 		revision_due_count: number;
-		weak_topics: Array<{ topic_name: string; score: number }>;
+		weak_topics: Array<{ topic_id: number; topic_name: string; score: number }>;
 		recommended_problems: Array<{ id: number; title: string; difficulty: string; topic: string }>;
 	}
 
@@ -80,6 +80,38 @@
 				Here's a snapshot of your progress. Keep your streak alive and tackle a recommended problem.
 			</p>
 		</div>
+
+		<!-- Continue card: nudge the user toward the single best next action -->
+		{#if stats.revision_due_count > 0}
+			<a
+				href="/revision"
+				class="lift flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50/60 p-5 hover:shadow-md"
+			>
+				<div class="flex items-center gap-4">
+					<div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-xl">⏳</div>
+					<div class="flex flex-col">
+						<span class="text-xs font-semibold uppercase tracking-wide text-amber-700">Due for revision</span>
+						<span class="font-title text-base font-bold text-slate-900">Start revision ({stats.revision_due_count} due)</span>
+					</div>
+				</div>
+				<span class="hidden shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white sm:inline">Start →</span>
+			</a>
+		{:else if stats.recommended_problems.length > 0}
+			{@const next = stats.recommended_problems[0]}
+			<a
+				href="/problems/{next.id}"
+				class="lift flex items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50/50 p-5 hover:shadow-md"
+			>
+				<div class="flex items-center gap-4">
+					<div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-xl">▶️</div>
+					<div class="flex min-w-0 flex-col">
+						<span class="text-xs font-semibold uppercase tracking-wide text-blue-700">Pick up where you left off</span>
+						<span class="truncate font-title text-base font-bold text-slate-900">{next.title}</span>
+					</div>
+				</div>
+				<span class="hidden shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white sm:inline">Solve →</span>
+			</a>
+		{/if}
 
 		<!-- Stat Cards -->
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -156,15 +188,18 @@
 					</CardHeader>
 					<CardContent class="flex flex-col gap-4">
 						{#each stats.weak_topics as topic}
-							<div class="flex flex-col gap-2">
+							<a
+								href="/problems?topic={topic.topic_id}"
+								class="group flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors hover:bg-slate-50"
+							>
 								<div class="flex items-center justify-between text-sm">
-									<span class="font-semibold text-slate-800">{topic.topic_name}</span>
+									<span class="font-semibold text-slate-800 group-hover:text-blue-600">{topic.topic_name}</span>
 									<span class="text-[13px] font-medium {topic.score < 50 ? 'text-rose-600' : topic.score < 75 ? 'text-amber-600' : 'text-emerald-600'}">
 										{topic.score}% proficiency
 									</span>
 								</div>
 								<Progress value={topic.score} class="h-2 bg-slate-100 {topic.score < 50 ? '[&>div]:bg-rose-500' : topic.score < 75 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}" />
-							</div>
+							</a>
 						{:else}
 							<EmptyState
 								title="No data yet"
