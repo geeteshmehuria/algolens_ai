@@ -17,6 +17,8 @@
 	let loading = $state(true);
 	let streak = $state<number | null>(null);
 	let roles = $state<string[] | null>(null);
+	// Mobile slide-in sidebar (no effect on lg+ where the sidebar is always shown)
+	let sidebarOpen = $state(false);
 
 	// Sidebar items definition. `adminOnly` items are hidden from regular users
 	// (the backend also enforces admin on those routes — this just avoids a
@@ -87,6 +89,12 @@
 			goto('/login');
 		}
 	});
+
+	// Close the mobile drawer whenever the route changes
+	$effect(() => {
+		page.url.pathname;
+		sidebarOpen = false;
+	});
 </script>
 
 <svelte:head>
@@ -102,8 +110,20 @@
 	{@render children()}
 {:else}
 	<div class="flex min-h-screen bg-slate-50 text-slate-900">
-		<!-- Sidebar -->
-		<aside class="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col p-6 z-40">
+		<!-- Mobile overlay: dims content and closes the drawer on tap (lg+: hidden) -->
+		{#if sidebarOpen}
+			<button
+				type="button"
+				aria-label="Close menu"
+				class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[1px] lg:hidden"
+				onclick={() => (sidebarOpen = false)}
+			></button>
+		{/if}
+
+		<!-- Sidebar: off-canvas drawer on mobile, fixed rail on lg+ -->
+		<aside
+			class="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col p-6 z-50 transition-transform duration-300 ease-out lg:translate-x-0 {sidebarOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'} lg:shadow-none"
+		>
 			<div class="flex items-center gap-3 mb-10 pl-2">
 				<div class="w-9 h-9 text-blue-600 flex items-center justify-center bg-blue-50 rounded-lg">
 					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
@@ -111,7 +131,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 					</svg>
 				</div>
-				<span class="font-bold text-lg flex items-center gap-1 text-slate-900">
+				<span class="font-title font-bold text-lg flex items-center gap-1 text-slate-900">
 					AlgoLens <span class="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide">AI</span>
 				</span>
 			</div>
@@ -150,10 +170,20 @@
 		</aside>
 
 		<!-- Main content area -->
-		<div class="flex-1 ml-64 flex flex-col min-h-screen">
-			<header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-30">
-				<div>
-					<h1 class="text-base font-bold text-slate-900">
+		<div class="flex-1 lg:ml-64 flex flex-col min-h-screen">
+			<header class="h-16 bg-white/90 backdrop-blur border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30">
+				<div class="flex items-center gap-3 min-w-0">
+					<button
+						type="button"
+						aria-label="Open menu"
+						class="lg:hidden -ml-1 inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+						onclick={() => (sidebarOpen = true)}
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+						</svg>
+					</button>
+					<h1 class="font-title text-base font-bold text-slate-900 truncate">
 						{menuItems.find(item => page.url.pathname.startsWith(item.path))?.name || 'AlgoLens AI'}
 					</h1>
 				</div>
@@ -167,8 +197,12 @@
 				</div>
 			</header>
 
-			<main class="p-8 flex-1">
-				{@render children()}
+			<main class="p-4 sm:p-6 lg:p-8 flex-1">
+				{#key page.url.pathname}
+					<div class="animate-fade-in">
+						{@render children()}
+					</div>
+				{/key}
 			</main>
 		</div>
 	</div>

@@ -32,6 +32,42 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+
+  /* Typography — Inter for UI/body, Outfit for display headings.
+     Both are loaded in app.html. Setting --font-sans makes the whole app
+     render in Inter; --font-title / --font-display power the `font-title`
+     and `font-display` utilities used on headings. */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-title: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  /* Motion tokens */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Entrance animations (registered as `animate-*` utilities) */
+  --animate-fade-in: fade-in 0.4s var(--ease-standard) both;
+  --animate-fade-in-up: fade-in-up 0.45s var(--ease-standard) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 :root {
@@ -83,7 +119,91 @@
   border-color: var(--color-border);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Calm selection highlight in the brand tint */
+::selection {
+  background-color: hsl(var(--primary) / 0.18);
+  color: hsl(var(--foreground));
+}
+
+/* Consistent, visible keyboard focus across the app (mouse clicks unaffected) */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring) / 0.55);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Refined, unobtrusive scrollbars */
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(215.4 16.3% 46.9% / 0.35) transparent;
+  }
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: hsl(215.4 16.3% 46.9% / 0.3);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(215.4 16.3% 46.9% / 0.5);
+}
+
+/* ---- Reusable, theme-driven helper utilities ----
+   Keep page markup clean: use these instead of repeating long class lists. */
+
+/* Subtle hover lift for interactive cards */
+.lift {
+  transition:
+    transform 0.2s var(--ease-standard),
+    box-shadow 0.2s var(--ease-standard),
+    border-color 0.2s var(--ease-standard);
+}
+.lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Soft brand gradient surface for hero / highlight panels */
+.surface-hero {
+  background-image: linear-gradient(
+    135deg,
+    hsl(221.2 83.2% 53.3% / 0.06) 0%,
+    hsl(199 89% 48% / 0.05) 100%
+  );
+}
+
+/* Respect users who prefer reduced motion: disable transitions/animations
+   and smooth scroll without removing functionality. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

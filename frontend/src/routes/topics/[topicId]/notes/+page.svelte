@@ -5,6 +5,7 @@
 	import { api } from '$lib/api';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
+	import LoadingState from '$lib/components/app/LoadingState.svelte';
 
 	// Components
 	import NotesSidebar from '$lib/components/notes/NotesSidebar.svelte';
@@ -280,7 +281,7 @@
 							☰ Topics
 						</button>
 
-						<h1 class="text-lg font-extrabold text-slate-900">
+						<h1 class="font-title text-lg font-bold text-slate-900">
 							{currentTopicItem?.name || 'Study Notes'}
 						</h1>
 					</div>
@@ -327,27 +328,27 @@
 
 			<!-- Main View Router -->
 			{#if loading}
-				<div class="flex flex-col items-center justify-center min-h-[300px] gap-3">
-					<div class="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-blue-600"></div>
-					<p class="text-xs text-slate-500 font-medium">Opening study folder...</p>
-				</div>
+				<LoadingState message="Opening study notes…" class="min-h-[300px]" />
 			{:else if error}
-				<div class="bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-2xl p-5 leading-relaxed">
-					<strong>Failed to load:</strong> {error}
+				<div class="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm leading-relaxed text-rose-700">
+					<p><strong>Failed to load:</strong> {error}</p>
+					<Button variant="outline" size="sm" class="border-rose-200 bg-white text-rose-700 hover:bg-rose-100" onclick={() => loadNoteData(topicId)}>
+						Try again
+					</Button>
 				</div>
 			{:else if generating}
 				<GenerationProgress onCancel={() => generating = false} />
 			{:else if canGenerate}
 				<!-- Initial Generation Screen -->
-				<div class="flex flex-col items-center justify-center text-center p-12 gap-5 max-w-[380px] m-auto">
-					<div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl font-bold">🧠</div>
+				<div class="m-auto flex max-w-[420px] flex-col items-center gap-5 rounded-2xl border border-dashed border-blue-200 bg-blue-50/30 p-12 text-center">
+					<div class="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl">🧠</div>
 					<div class="flex flex-col gap-1.5">
-						<h3 class="font-extrabold text-slate-800 text-base">Generate AI DSA Study Notes</h3>
-						<p class="text-xs text-slate-500 leading-relaxed">
-							No study notes exist yet for <strong>{currentTopicItem?.name}</strong>. Google Gemini will build a highly-detailed revision sheet, code template scripts, and interactive quiz.
+						<h3 class="font-title text-base font-bold text-slate-800">Generate AI DSA Study Notes</h3>
+						<p class="text-sm leading-relaxed text-slate-500">
+							No study notes exist yet for <strong class="text-slate-700">{currentTopicItem?.name}</strong>. Google Gemini will build a detailed revision sheet, code templates, and an interactive quiz.
 						</p>
 					</div>
-					<Button class="bg-blue-600 hover:bg-blue-700 text-white w-full h-10 text-xs font-semibold shadow" onclick={handleGenerateNotes}>
+					<Button class="h-10 w-full bg-blue-600 text-sm font-semibold text-white shadow hover:bg-blue-700" onclick={handleGenerateNotes}>
 						Generate Topic Notes
 					</Button>
 				</div>

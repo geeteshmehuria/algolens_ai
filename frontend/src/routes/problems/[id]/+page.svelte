@@ -7,6 +7,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { api } from '$lib/api';
+	import LoadingState from '$lib/components/app/LoadingState.svelte';
+	import DifficultyBadge from '$lib/components/app/DifficultyBadge.svelte';
 
 	interface Problem {
 		id: number;
@@ -253,18 +255,26 @@
 </script>
 
 {#if loading}
-	<div class="flex flex-col items-center justify-center min-h-[400px] gap-3">
-		<div class="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-blue-600"></div>
-		<p class="text-sm text-slate-500 font-medium">Opening problem statement...</p>
+	<LoadingState message="Opening problem statement…" class="min-h-[400px]" />
+{:else if !problem}
+	<div class="flex items-center justify-center min-h-[400px]">
+		<Card class="max-w-[420px] border-slate-200 p-6 text-center">
+			<CardHeader>
+				<CardTitle class="font-title text-lg text-slate-900">Problem not found</CardTitle>
+				<CardDescription>We couldn't load this problem. It may have been removed or the link is incorrect.</CardDescription>
+			</CardHeader>
+			<CardContent class="flex justify-center gap-2 pt-2">
+				<Button variant="outline" onclick={() => window.location.reload()}>Try again</Button>
+				<Button class="bg-blue-600 text-white hover:bg-blue-700" href="/problems">Back to problems</Button>
+			</CardContent>
+		</Card>
 	</div>
 {:else if problem}
 	<div class="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-theme(spacing.16)-4rem)]">
 		<!-- Left Side: Problem Statement (40%) -->
 		<Card class="lg:col-span-2 flex flex-col h-full overflow-y-auto border-slate-200 bg-white p-6 gap-4">
 			<div class="flex justify-between items-center">
-				<Badge class="text-xs font-semibold py-0.5 rounded-full {problem.difficulty === 'Easy' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' : problem.difficulty === 'Medium' ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200' : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200'}">
-					{problem.difficulty}
-				</Badge>
+				<DifficultyBadge difficulty={problem.difficulty} />
 				<div class="flex items-center gap-3">
 					{#if problem.leetcode_url}
 						<a href={problem.leetcode_url} target="_blank" rel="noreferrer" class="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline">
@@ -281,7 +291,7 @@
 				</div>
 			</div>
 
-			<h2 class="text-xl font-bold text-slate-900">{problem.title}</h2>
+			<h2 class="font-title text-xl font-bold text-slate-900">{problem.title}</h2>
 
 			<div class="flex flex-col gap-5">
 				<p class="text-[14.5px] text-slate-700 leading-relaxed white-space-pre-wrap">{problem.description}</p>
@@ -354,7 +364,7 @@
 				<Tabs.Content value="logic" class="flex-1 flex flex-col p-6 m-0 outline-none">
 					{#if !aiExplanation}
 						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[340px] m-auto">
-							<h3 class="font-bold text-slate-900 text-base">Visual DSA Explanations</h3>
+							<h3 class="font-title text-base font-bold text-slate-900">Visual DSA Explanations</h3>
 							<p class="text-xs text-slate-500 leading-relaxed mb-2">
 								Generate a step-by-step logic review including optimal space/time complexities tailored by Google Gemini.
 							</p>
@@ -412,7 +422,7 @@
 				<Tabs.Content value="pseudocode" class="flex-1 flex flex-col p-6 m-0 outline-none h-full">
 					{#if !aiExplanation}
 						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[340px] m-auto">
-							<h3 class="font-bold text-slate-900 text-base">Pseudocode Viewer</h3>
+							<h3 class="font-title text-base font-bold text-slate-900">Pseudocode Viewer</h3>
 							<p class="text-xs text-slate-500 leading-relaxed mb-2">
 								Please generate the AI Explanation to load the structured pseudocode template.
 							</p>
@@ -442,7 +452,7 @@
 				<Tabs.Content value="animation" class="flex-1 flex flex-col p-6 m-0 outline-none">
 					{#if !animationData}
 						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[340px] m-auto">
-							<h3 class="font-bold text-slate-900 text-base">Visual Logic Player</h3>
+							<h3 class="font-title text-base font-bold text-slate-900">Visual Logic Player</h3>
 							<p class="text-xs text-slate-500 leading-relaxed mb-2">
 								Generate visual representations (Array nodes, Stack blocks, DP state grids) based on Gemini AI step data.
 							</p>
@@ -627,7 +637,7 @@
 					<div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
 						Python Sandbox (Python 3)
 					</div>
-					<textarea class="w-full flex-1 bg-slate-950 text-slate-100 font-mono text-[13px] p-5 outline-none resize-none leading-relaxed" bind:value={submittedCode} spellcheck="false"></textarea>
+					<textarea aria-label="Python code editor" class="w-full flex-1 bg-slate-950 text-slate-100 font-mono text-[13px] p-5 outline-none resize-none leading-relaxed focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500/50" bind:value={submittedCode} spellcheck="false"></textarea>
 
 					<!-- Editor Buttons -->
 					<div class="flex items-center justify-between p-4 bg-slate-900 border-t border-slate-800">
@@ -654,13 +664,10 @@
 				<!-- Tab 5: AI Review -->
 				<Tabs.Content value="review" class="flex-1 flex flex-col p-6 m-0 outline-none">
 					{#if isSubmittingCode}
-						<div class="flex flex-col items-center justify-center p-12 gap-3 m-auto">
-							<div class="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-blue-600"></div>
-							<p class="text-sm text-slate-500 font-medium">Google Gemini AI is reviewing your solution structure...</p>
-						</div>
+						<LoadingState message="Gemini is reviewing your solution…" class="m-auto" />
 					{:else if !codeReview}
 						<div class="flex flex-col items-center justify-center text-center gap-2 max-w-[340px] m-auto">
-							<h3 class="font-bold text-slate-900 text-base">AI Code Reviews</h3>
+							<h3 class="font-title text-base font-bold text-slate-900">AI Code Reviews</h3>
 							<p class="text-xs text-slate-500 leading-relaxed">
 								Submit your code solution in the Code Editor tab to trigger an instant AI review on correctness, time/space complexities, and bugs.
 							</p>
@@ -744,8 +751,9 @@
 					</div>
 					<textarea
 						bind:value={noteContent}
+						aria-label="My notes for this problem"
 						placeholder="e.g. I forgot the empty-array edge case. Key insight: the array being sorted means a too-small sum can only be fixed by moving the left pointer..."
-						class="flex-1 w-full border border-slate-200 rounded-xl p-4 text-[13px] leading-relaxed text-slate-800 outline-none focus:border-blue-400 resize-none bg-slate-50/50"
+						class="flex-1 w-full border border-slate-200 rounded-xl p-4 text-[13px] leading-relaxed text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 resize-none bg-slate-50/50 transition-all"
 						spellcheck="false"
 					></textarea>
 				</Tabs.Content>

@@ -2,14 +2,10 @@
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
 	import { api } from "$lib/api";
-	import {
-		Card,
-		CardContent,
-		CardHeader,
-		CardTitle,
-		CardDescription,
-	} from "$lib/components/ui/card";
+	import { Card, CardContent, CardHeader } from "$lib/components/ui/card";
 	import { Button } from "$lib/components/ui/button";
+	import LoadingState from "$lib/components/app/LoadingState.svelte";
+	import EmptyState from "$lib/components/app/EmptyState.svelte";
 
 	interface TopicItem {
 		id: number;
@@ -54,6 +50,13 @@
 		}
 	}
 
+	const filters = [
+		{ id: "all", label: "All Topics" },
+		{ id: "in_progress", label: "In Progress" },
+		{ id: "completed", label: "Completed" },
+		{ id: "bookmarked", label: "Bookmarked" },
+	] as const;
+
 	// Filter and search topics
 	let filteredTopics = $derived(
 		topics.filter((topic) => {
@@ -83,40 +86,52 @@
 	);
 </script>
 
-<div class="flex flex-col gap-6 w-full">
+<div class="flex w-full flex-col gap-6">
 	<!-- Top Summary Banner -->
-	<Card
-		class="border-slate-200 bg-white p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+	<div
+		class="surface-hero flex flex-col justify-between gap-4 rounded-2xl border border-blue-100/70 p-6 md:flex-row md:items-center"
 	>
-		<CardHeader class="p-0 flex-1 min-w-0">
-			<CardTitle class="text-lg font-bold text-slate-900"
-				>AI DSA Study Notes</CardTitle
-			>
-			<CardDescription class="text-xs text-slate-500">
-				Access deep structured revision summaries, complexity
-				derivations, and interactive quizzes for 22 DSA categories.
-			</CardDescription>
-		</CardHeader>
+		<div class="min-w-0">
+			<h1 class="font-title text-xl font-bold tracking-tight text-slate-900">
+				AI DSA Study Notes
+			</h1>
+			<p class="mt-1 text-sm text-slate-600">
+				Deep structured summaries, complexity derivations, and interactive
+				quizzes across 22 DSA categories.
+			</p>
+		</div>
 
-		<div class="flex gap-2 shrink-0 w-full md:w-auto">
+		<div class="relative w-full shrink-0 md:w-72">
+			<svg
+				class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+			</svg>
 			<input
 				type="text"
-				placeholder="Search topics..."
+				placeholder="Search topics…"
 				bind:value={searchQuery}
-				class="text-xs px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full md:w-60 transition-all"
+				aria-label="Search topics"
+				class="w-full rounded-lg border border-slate-200 bg-white/80 py-2 pl-9 pr-3 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
 			/>
 		</div>
-	</Card>
+	</div>
 
 	<!-- Filters Row -->
-	<div class="flex items-center gap-2">
-		{#each [{ id: "all", label: "All Topics" }, { id: "in_progress", label: "In Progress" }, { id: "completed", label: "Completed" }, { id: "bookmarked", label: "Bookmarked" }] as filter}
+	<div class="flex flex-wrap items-center gap-2">
+		{#each filters as filter}
 			<button
-				onclick={() => (filterType = filter.id as any)}
-				class="text-xs font-semibold px-4 py-2 rounded-xl border transition-all duration-200 {filterType ===
+				onclick={() => (filterType = filter.id)}
+				aria-pressed={filterType === filter.id}
+				class="rounded-lg border px-4 py-2 text-xs font-semibold transition-all duration-200 {filterType ===
 				filter.id
-					? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-					: 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700'}"
+					? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+					: 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'}"
 			>
 				{filter.label}
 			</button>
@@ -125,115 +140,85 @@
 
 	<!-- Topics Grid -->
 	{#if loading}
-		<div
-			class="flex flex-col items-center justify-center p-16 gap-3 bg-white border border-slate-200 rounded-2xl"
-		>
-			<div
-				class="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-blue-600"
-			></div>
-			<p class="text-xs text-slate-500 font-medium">
-				Loading topics list...
-			</p>
-		</div>
+		<LoadingState message="Loading topics…" />
 	{:else if filteredTopics.length === 0}
-		<Card
-			class="border-slate-200 bg-white p-16 text-center flex flex-col items-center justify-center gap-2"
+		<EmptyState
+			title={searchQuery || filterType !== "all" ? "No matching topics" : "No notes yet"}
+			description={searchQuery || filterType !== "all"
+				? "Try a different search term or clear your filters."
+				: "Open a topic to generate your first AI study note."}
 		>
-			<h3 class="text-base font-bold text-slate-800">No notes found</h3>
-			<p class="text-xs text-slate-400 max-w-[320px]">
-				Adjust your search query or filters. Open a topic card to
-				trigger your first note generation.
-			</p>
-		</Card>
+			{#snippet icon()}
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" class="h-6 w-6">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+				</svg>
+			{/snippet}
+			{#snippet action()}
+				{#if searchQuery || filterType !== "all"}
+					<Button variant="outline" onclick={() => { searchQuery = ""; filterType = "all"; }}>Clear filters</Button>
+				{/if}
+			{/snippet}
+		</EmptyState>
 	{:else}
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredTopics as topic}
-				{@const hasState =
-					topic.state !== null && topic.state !== undefined}
+				{@const hasState = topic.state !== null && topic.state !== undefined}
 				{@const isCompleted =
 					hasState &&
 					(topic.state?.status === "completed" ||
 						topic.state?.status === "revised")}
-				{@const isReading =
-					hasState && topic.state?.status === "reading"}
+				{@const isReading = hasState && topic.state?.status === "reading"}
 				{@const isBookmarked = hasState && topic.state?.is_bookmarked}
 
 				<Card
-					class="border-slate-200 bg-white hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col overflow-hidden group"
+					class="lift group flex flex-col overflow-hidden border-slate-200 bg-white shadow-sm hover:border-blue-300 hover:shadow-md"
 				>
-					<CardHeader
-						class="p-5 flex flex-col gap-1.5 border-b border-slate-50"
-					>
-						<div class="flex justify-between items-start">
+					<CardHeader class="flex flex-col gap-1.5 border-b border-slate-100 p-5">
+						<div class="flex items-start justify-between gap-2">
 							<span
-								class="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border {topic.has_published_note
-									? 'bg-blue-50 text-blue-700 border-blue-100'
-									: 'bg-slate-100 text-slate-500 border-slate-200'}"
+								class="rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {topic.has_published_note
+									? 'border-blue-100 bg-blue-50 text-blue-700'
+									: 'border-slate-200 bg-slate-100 text-slate-500'}"
 							>
-								{topic.has_published_note
-									? "Notes Available"
-									: "AI Draft Only"}
+								{topic.has_published_note ? "Notes Available" : "AI Draft Only"}
 							</span>
 
 							<div class="flex items-center gap-1.5">
 								{#if isBookmarked}
-									<span class="text-xs" title="Bookmarked"
-										>⭐</span
-									>
+									<span class="text-sm" title="Bookmarked" aria-label="Bookmarked">⭐</span>
 								{/if}
 								{#if isCompleted}
-									<span
-										class="text-[9px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full"
-										>Completed</span
-									>
+									<span class="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Completed</span>
 								{:else if isReading}
-									<span
-										class="text-[9px] font-extrabold bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full"
-										>In Progress</span
-									>
+									<span class="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">In Progress</span>
 								{/if}
 							</div>
 						</div>
 
-						<h3
-							class="text-[14px] font-extrabold text-slate-900 mt-1.5 group-hover:text-blue-600 transition-colors"
-						>
+						<h3 class="mt-1.5 font-title text-base font-bold text-slate-900 transition-colors group-hover:text-blue-600">
 							{topic.name}
 						</h3>
-						<p
-							class="text-[11px] text-slate-400 font-medium line-clamp-2 leading-relaxed min-h-[32px]"
-						>
-							{topic.description ||
-								"Category of data structures and algorithms"}
+						<p class="line-clamp-2 min-h-[36px] text-xs leading-relaxed text-slate-500">
+							{topic.description || "Category of data structures and algorithms"}
 						</p>
 					</CardHeader>
 
-					<CardContent
-						class="p-5 flex flex-col gap-4 flex-1 justify-between bg-slate-50/20"
-					>
-						<div
-							class="flex items-center justify-between text-[10px] font-bold text-slate-500"
-						>
-							<div class="flex items-center gap-1">
-								<span>Sections read:</span>
-								<span class="text-slate-800"
-									>{topic.state?.completed_sections_count ||
-										0}</span
-								>
-							</div>
+					<CardContent class="flex flex-1 flex-col justify-between gap-4 bg-slate-50/30 p-5">
+						<div class="flex items-center justify-between text-xs font-medium text-slate-500">
+							<span>
+								Sections read:
+								<span class="font-bold text-slate-800">{topic.state?.completed_sections_count || 0}</span>
+							</span>
 
 							{#if topic.last_quiz}
-								<span
-									class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded"
-								>
-									Quiz Score: {topic.last_quiz.score}/{topic
-										.last_quiz.total}
+								<span class="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
+									Quiz: {topic.last_quiz.score}/{topic.last_quiz.total}
 								</span>
 							{/if}
 						</div>
 
 						<Button
-							class="bg-blue-600 hover:bg-blue-700 text-white w-full text-xs h-9 font-semibold"
+							class="h-9 w-full bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700"
 							href="/topics/{topic.id}/notes"
 						>
 							Open Study Notes

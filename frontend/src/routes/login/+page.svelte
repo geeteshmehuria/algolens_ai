@@ -63,20 +63,56 @@
 	}
 </script>
 
-<div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/50 p-4">
+<div class="grid min-h-screen lg:grid-cols-2">
+	<!-- Brand panel (desktop only) -->
+	<aside class="relative hidden flex-col justify-between overflow-hidden bg-slate-900 p-12 text-white lg:flex">
+		<div class="absolute inset-0 bg-gradient-to-br from-blue-600/30 via-slate-900 to-slate-950"></div>
+		<div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl"></div>
+		<div class="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl"></div>
+
+		<div class="relative flex items-center gap-3">
+			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white ring-1 ring-white/20">
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-6 w-6">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12.9 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+					<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+				</svg>
+			</div>
+			<span class="font-title text-lg font-bold">AlgoLens <span class="text-blue-400">AI</span></span>
+		</div>
+
+		<div class="relative max-w-md">
+			<h2 class="font-title text-3xl font-bold leading-tight tracking-tight">
+				Master Data Structures &amp; Algorithms, visually.
+			</h2>
+			<p class="mt-4 text-sm leading-relaxed text-slate-300">
+				AI-generated notes, animated walkthroughs, spaced-repetition revision, and a
+				personalized roadmap — all in one focused workspace.
+			</p>
+			<ul class="mt-8 flex flex-col gap-3 text-sm text-slate-200">
+				<li class="flex items-center gap-3"><span class="text-blue-400">✓</span> Step-by-step algorithm animations</li>
+				<li class="flex items-center gap-3"><span class="text-blue-400">✓</span> AI explanations &amp; complexity breakdowns</li>
+				<li class="flex items-center gap-3"><span class="text-blue-400">✓</span> Smart revision that adapts to you</li>
+			</ul>
+		</div>
+
+		<p class="relative text-xs text-slate-400">Built for focused, interview-ready learning.</p>
+	</aside>
+
+	<!-- Form panel -->
+	<div class="flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/50 p-4">
 	<Card class="w-full max-w-[440px] shadow-xl border border-slate-200 bg-white">
 		<CardHeader class="text-center pt-8 pb-4">
-			<div class="inline-flex w-12 h-12 bg-blue-50 text-blue-600 rounded-xl items-center justify-center mb-3 mx-auto">
+			<div class="inline-flex w-12 h-12 bg-blue-50 text-blue-600 rounded-xl items-center justify-center mb-3 mx-auto lg:hidden">
 				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12.9 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
 					<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 				</svg>
 			</div>
-			<CardTitle class="text-2xl font-extrabold tracking-tight text-slate-900">
-				AlgoLens <span class="text-blue-600">AI</span>
+			<CardTitle class="font-title text-2xl font-extrabold tracking-tight text-slate-900">
+				{isLogin ? 'Welcome back' : 'Create your account'}
 			</CardTitle>
 			<CardDescription class="text-xs text-slate-500 mt-1">
-				Visual DSA learning with AI explanations and animations
+				{isLogin ? 'Sign in to continue your DSA journey' : 'Start learning DSA the visual way'}
 			</CardDescription>
 		</CardHeader>
 
@@ -136,4 +172,5 @@
 			</form>
 		</CardContent>
 	</Card>
+	</div>
 </div>

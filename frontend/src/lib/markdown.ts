@@ -26,7 +26,7 @@ function renderInline(escaped: string): string {
 	// Inline code — render first so its contents are not further formatted.
 	t = t.replace(
 		/`([^`]+)`/g,
-		'<code class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[11px] font-semibold border border-slate-200/60">$1</code>'
+		'<code class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[13px] font-semibold border border-slate-200/60">$1</code>'
 	);
 
 	// Links [label](url) — restrict the scheme; encode quotes in href.
@@ -68,7 +68,7 @@ export function renderMarkdown(md: string): string {
 	const flushParagraph = (buf: string[]) => {
 		if (buf.length === 0) return;
 		const html = buf.map((l) => renderInline(l.trim())).join('<br>');
-		out.push(`<p class="text-slate-600 leading-relaxed text-xs my-3">${html}</p>`);
+		out.push(`<p class="text-slate-600 leading-relaxed text-sm my-3">${html}</p>`);
 		buf.length = 0;
 	};
 
@@ -111,7 +111,7 @@ export function renderMarkdown(md: string): string {
 				header
 					.map(
 						(c) =>
-							`<th class="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-bold text-slate-700">${renderInline(c)}</th>`
+							`<th class="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-bold text-slate-700">${renderInline(c)}</th>`
 					)
 					.join('') +
 				'</tr></thead>';
@@ -124,7 +124,7 @@ export function renderMarkdown(md: string): string {
 							row
 								.map(
 									(c) =>
-										`<td class="border border-slate-200 px-3 py-2 text-[11px] text-slate-600 align-top">${renderInline(c)}</td>`
+										`<td class="border border-slate-200 px-3 py-2 text-[13px] text-slate-600 align-top">${renderInline(c)}</td>`
 								)
 								.join('') +
 							'</tr>'
@@ -142,12 +142,12 @@ export function renderMarkdown(md: string): string {
 		if (heading) {
 			const level = heading[1].length;
 			const sizes: Record<number, string> = {
-				1: 'text-base font-extrabold text-slate-900 mt-4 mb-2',
-				2: 'text-sm font-extrabold text-slate-900 mt-4 mb-2',
-				3: 'text-xs font-bold text-slate-800 uppercase tracking-wider mt-3 mb-1.5',
-				4: 'text-xs font-bold text-slate-700 mt-3 mb-1.5',
-				5: 'text-[11px] font-bold text-slate-700 mt-2 mb-1',
-				6: 'text-[11px] font-semibold text-slate-600 mt-2 mb-1'
+				1: 'font-title text-lg font-extrabold text-slate-900 mt-5 mb-2.5',
+				2: 'font-title text-base font-bold text-slate-900 mt-5 mb-2',
+				3: 'text-xs font-bold text-slate-800 uppercase tracking-wider mt-4 mb-1.5',
+				4: 'text-sm font-bold text-slate-700 mt-3 mb-1.5',
+				5: 'text-[13px] font-bold text-slate-700 mt-2 mb-1',
+				6: 'text-xs font-semibold text-slate-600 mt-2 mb-1'
 			};
 			out.push(`<h${level} class="${sizes[level]}">${renderInline(heading[2].trim())}</h${level}>`);
 			i++;
@@ -162,7 +162,7 @@ export function renderMarkdown(md: string): string {
 				i++;
 			}
 			out.push(
-				`<blockquote class="border-l-4 border-slate-200 pl-4 my-3 text-slate-500 italic text-xs">${quote
+				`<blockquote class="border-l-4 border-blue-200 bg-blue-50/30 rounded-r-lg py-2 pr-3 pl-4 my-3 text-slate-600 italic text-sm">${quote
 					.map((l) => renderInline(l.trim()))
 					.join('<br>')}</blockquote>`
 			);
@@ -177,7 +177,7 @@ export function renderMarkdown(md: string): string {
 				i++;
 			}
 			out.push(
-				`<ul class="list-disc pl-5 my-3 flex flex-col gap-1 text-xs text-slate-600">${items
+				`<ul class="list-disc pl-5 my-3 flex flex-col gap-1.5 text-sm text-slate-600 marker:text-slate-400">${items
 					.map((it) => `<li class="leading-relaxed">${renderInline(it.trim())}</li>`)
 					.join('')}</ul>`
 			);
@@ -192,7 +192,7 @@ export function renderMarkdown(md: string): string {
 				i++;
 			}
 			out.push(
-				`<ol class="list-decimal pl-5 my-3 flex flex-col gap-1 text-xs text-slate-600">${items
+				`<ol class="list-decimal pl-5 my-3 flex flex-col gap-1.5 text-sm text-slate-600 marker:text-slate-400 marker:font-semibold">${items
 					.map((it) => `<li class="leading-relaxed">${renderInline(it.trim())}</li>`)
 					.join('')}</ol>`
 			);
