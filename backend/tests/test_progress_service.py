@@ -8,6 +8,7 @@ from app.services.progress_service import (
     schedule_revision,
     calculate_streak,
     compute_topic_proficiency,
+    daily_activity,
     recommend_problems,
 )
 
@@ -24,6 +25,38 @@ def _attempt(session, user, problem, status="Correct", days_ago=0, ai_score=None
     session.add(a)
     session.commit()
     return a
+
+
+# --- daily_activity ---
+
+
+def test_daily_activity_dense_window_and_counts(session, user, make_problem):
+    problem = make_problem()
+    # Two attempts today, one three days ago, one outside the 84-day window.
+    _attempt(session, user, problem, days_ago=0)
+    _attempt(session, user, problem, days_ago=0)
+    _attempt(session, user, problem, days_ago=3)
+    _attempt(session, user, problem, days_ago=200)
+
+    activity = daily_activity(session, user.id, days=84)
+
+    # Dense, zero-filled, oldest-first, ascending dates.
+    assert len(activity) == 84
+    dates = [row["date"] for row in activity]
+    assert dates == sorted(dates)
+
+    today = datetime.utcnow().date()
+    by_date = {row["date"]: row["count"] for row in activity}
+    assert by_date[today.isoformat()] == 2
+    assert by_date[(today - timedelta(days=3)).isoformat()] == 1
+    # The 200-day-old attempt is excluded from the window entirely.
+    assert sum(row["count"] for row in activity) == 3
+
+
+def test_daily_activity_empty_for_new_user(session, user):
+    activity = daily_activity(session, user.id, days=84)
+    assert len(activity) == 84
+    assert all(row["count"] == 0 for row in activity)
 
 
 # --- schedule_revision ---

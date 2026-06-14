@@ -12,10 +12,16 @@ from app.routers.auth import get_current_user, User
 from app.services.progress_service import (
     calculate_streak,
     compute_topic_proficiency,
+    daily_activity,
     recommend_problems,
 )
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+
+class ActivityDay(BaseModel):
+    date: str
+    count: int
 
 
 class DashboardSummary(BaseModel):
@@ -84,3 +90,12 @@ def get_dashboard_summary(
         weak_topics=weak_topics,
         recommended_problems=recommended_problems,
     )
+
+
+@router.get("/activity", response_model=List[ActivityDay])
+def get_activity(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Per-day attempt counts (last 12 weeks) for the contribution heatmap."""
+    return daily_activity(session, current_user.id, days=84)

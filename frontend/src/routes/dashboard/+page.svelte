@@ -9,6 +9,7 @@
 	import DifficultyBadge from '$lib/components/app/DifficultyBadge.svelte';
 	import EmptyState from '$lib/components/app/EmptyState.svelte';
 	import LoadingState from '$lib/components/app/LoadingState.svelte';
+	import StreakHeatmap from '$lib/components/app/StreakHeatmap.svelte';
 
 	interface DashboardSummary {
 		solved_count: number;
@@ -20,6 +21,7 @@
 	}
 
 	let stats = $state<DashboardSummary | null>(null);
+	let activity = $state<Array<{ date: string; count: number }>>([]);
 	let loading = $state(true);
 	let error = $state('');
 
@@ -41,6 +43,11 @@
 
 		try {
 			stats = await api<DashboardSummary>('/dashboard/summary');
+			// Activity feeds the heatmap; it's non-critical, so a failure here must
+			// not blank the dashboard.
+			api<Array<{ date: string; count: number }>>('/dashboard/activity')
+				.then((rows) => (activity = rows))
+				.catch(() => (activity = []));
 		} catch (err: any) {
 			if (err instanceof ApiError && err.status === 401) {
 				localStorage.removeItem('token');
@@ -133,6 +140,29 @@
 				{#snippet icon()}⏳{/snippet}
 			</StatCard>
 		</div>
+
+		<!-- Activity heatmap -->
+		<Card class="border-slate-200 bg-white">
+			<CardHeader class="pb-2">
+				<div class="flex items-center justify-between gap-3">
+					<div>
+						<CardTitle class="font-title text-lg font-bold text-slate-900">Activity</CardTitle>
+						<CardDescription class="text-xs text-slate-500">Your attempts over the last 12 weeks.</CardDescription>
+					</div>
+					<div class="flex items-center gap-1.5 rounded-full border border-amber-200/60 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+						<span>🔥</span>
+						<span>{stats.streak}-day streak</span>
+					</div>
+				</div>
+			</CardHeader>
+			<CardContent class="overflow-x-auto">
+				{#if activity.length}
+					<StreakHeatmap data={activity} />
+				{:else}
+					<p class="py-4 text-sm text-slate-400">No activity recorded yet — solve a problem to start your heatmap.</p>
+				{/if}
+			</CardContent>
+		</Card>
 
 		<!-- Main Sections -->
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-5">

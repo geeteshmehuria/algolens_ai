@@ -84,6 +84,42 @@ def calculate_streak(session: Session, user_id: int) -> int:
     return streak
 
 
+def daily_activity(session: Session, user_id: int, days: int = 84) -> List[dict]:
+    """Per-day attempt counts for the last ``days`` days, for a contribution heatmap.
+
+    Returns a dense, zero-filled list ``[{"date": "YYYY-MM-DD", "count": int}]``
+    ordered oldest-first. Dates are UTC (``created_on`` is ``utcnow``), matching
+    how streaks are anchored elsewhere in this module.
+    """
+    today = datetime.utcnow().date()
+    start = today - timedelta(days=days - 1)
+    # Filter on the raw datetime column (DB-agnostic) rather than comparing a
+    # func.date() result to a string, which is not portable across SQLite/PG.
+    start_dt = datetime.combine(start, datetime.min.time())
+
+    rows = session.exec(
+        select(func.date(ProblemAttempt.created_on), func.count(ProblemAttempt.id))
+        .where(
+            ProblemAttempt.user_id == user_id,
+            ProblemAttempt.created_on >= start_dt,
+        )
+        .group_by(func.date(ProblemAttempt.created_on))
+    ).all()
+
+    counts: dict = {}
+    for raw_day, count in rows:
+        key = date.fromisoformat(raw_day) if isinstance(raw_day, str) else raw_day
+        counts[key] = int(count or 0)
+
+    return [
+        {
+            "date": (day := start + timedelta(days=i)).isoformat(),
+            "count": counts.get(day, 0),
+        }
+        for i in range(days)
+    ]
+
+
 def compute_topic_proficiency(session: Session, user_id: int) -> List[dict]:
     """Per-topic proficiency from real attempts.
 
