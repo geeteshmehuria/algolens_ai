@@ -1,4 +1,5 @@
 # app/main.py
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,6 +19,8 @@ from app.routers import (
     topic_notes,
 )
 
+logger = logging.getLogger(__name__)
+
 # Schema is managed by Alembic — run `alembic upgrade head` (or init_db.py for
 # a fresh database) before starting the server.
 app = FastAPI(
@@ -28,9 +31,17 @@ app = FastAPI(
 
 # Configure CORS from settings: FRONTEND_URL + CORS_ORIGINS always; localhost
 # dev origins are added only outside production (see Settings.allowed_cors_origins).
+allowed_origins = settings.allowed_cors_origins()
+logger.info("Allowed CORS origins: %s", allowed_origins)
+
+allow_origin_regex = settings.CORS_ORIGIN_REGEX if settings.CORS_ORIGIN_REGEX else None
+if allow_origin_regex:
+    logger.info("Allowed CORS origin regex: %s", allow_origin_regex)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_cors_origins(),
+    allow_origins=allowed_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

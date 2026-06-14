@@ -1,6 +1,6 @@
 // Central API client — single place for the backend URL, auth header,
-// and error extraction (FastAPI puts messages in `detail`).
-export const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+const rawApiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+export const API_BASE = rawApiUrl.replace(/\/+$/, '');
 
 export class ApiError extends Error {
 	status: number;
@@ -29,7 +29,8 @@ export async function api<T = any>(path: string, options: RequestInit = {}): Pro
 		};
 		if (token) headers['Authorization'] = `Bearer ${token}`;
 
-		const res = await fetch(`${API_BASE}/api${path}`, { ...options, headers });
+		const cleanPath = path.startsWith('/') ? path : `/${path}`;
+		const res = await fetch(`${API_BASE}/api${cleanPath}`, { ...options, headers });
 		if (!res.ok) {
 			let detail = `Request failed (${res.status})`;
 			try {

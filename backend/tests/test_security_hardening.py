@@ -81,6 +81,33 @@ def test_dev_cors_includes_localhost_but_prod_does_not():
     assert prod.allowed_cors_origins() == ["https://app.example.com"]
 
 
+def test_production_rejects_localhost_only_cors():
+    s = Settings(
+        ENVIRONMENT="production",
+        JWT_SECRET="x" * 48,
+        FRONTEND_URL="http://localhost:5173",
+        CORS_ORIGINS="http://127.0.0.1:5173",
+    )
+    with pytest.raises(RuntimeError, match="localhost origins"):
+        _validate_production_config(s)
+
+
+def test_cors_origin_normalization():
+    # If no protocol is provided, it should normalize to both https and http
+    s = Settings(
+        ENVIRONMENT="production",
+        FRONTEND_URL="algolens-ai.vercel.app",
+        CORS_ORIGINS="other-app.vercel.app/,https://explicit.com",
+    )
+    allowed = s.allowed_cors_origins()
+    assert "https://algolens-ai.vercel.app" in allowed
+    assert "http://algolens-ai.vercel.app" in allowed
+    assert "https://other-app.vercel.app" in allowed
+    assert "http://other-app.vercel.app" in allowed
+    assert "https://explicit.com" in allowed
+    assert "http://explicit.com" not in allowed
+
+
 # --- Rate limiting --------------------------------------------------------
 
 

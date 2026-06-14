@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     # FRONTEND_URL is always allowed; localhost origins are added only in
     # non-production environments.
     CORS_ORIGINS: str = ""
+    CORS_ORIGIN_REGEX: str = ""
 
     # Password reset
     FRONTEND_URL: str = "http://localhost:5173"
@@ -106,11 +107,23 @@ class Settings(BaseSettings):
         any CORS_ORIGINS entries are always included; localhost dev origins are
         added only outside production."""
         origins: list[str] = []
+        raw_origins = []
         if self.FRONTEND_URL:
-            origins.append(self.FRONTEND_URL.rstrip("/"))
-        origins.extend(
-            o.strip().rstrip("/") for o in self.CORS_ORIGINS.split(",") if o.strip()
-        )
+            raw_origins.append(self.FRONTEND_URL)
+        if self.CORS_ORIGINS:
+            raw_origins.extend(self.CORS_ORIGINS.split(","))
+
+        for o in raw_origins:
+            o_clean = o.strip().rstrip("/")
+            if not o_clean:
+                continue
+            if not (o_clean.startswith("http://") or o_clean.startswith("https://")):
+                # Normalize by adding both https:// and http:// protocols
+                origins.append(f"https://{o_clean}")
+                origins.append(f"http://{o_clean}")
+            else:
+                origins.append(o_clean)
+
         if not self.is_production:
             origins.extend(
                 [
@@ -148,11 +161,24 @@ def _validate_production_config(s: "Settings") -> None:
         )
     elif len(s.JWT_SECRET) < 32:
         errors.append("JWT_SECRET should be at least 32 characters long.")
-    if not s.allowed_cors_origins():
+
+    prod_origins = s.allowed_cors_origins()
+    if not prod_origins:
         errors.append(
             "Set FRONTEND_URL (and/or CORS_ORIGINS) to your production frontend "
             "origin so CORS is not left empty."
         )
+    else:
+        # Check if all allowed CORS origins are localhost loopbacks
+        is_only_localhost = all(
+            "localhost" in o or "127.0.0.1" in o for o in prod_origins
+        )
+        if is_only_localhost:
+            errors.append(
+                "FRONTEND_URL and CORS_ORIGINS are configured only with localhost origins in production. "
+                "Set FRONTEND_URL to your deployed production frontend origin (e.g., https://algolens-ai.vercel.app)."
+            )
+
     if errors:
         raise RuntimeError(
             "Refusing to start with insecure production configuration:\n  - "
