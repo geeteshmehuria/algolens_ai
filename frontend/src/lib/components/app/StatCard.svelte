@@ -30,7 +30,7 @@
 	}>();
 </script>
 
-<Card class="lift flex items-center gap-4 border-slate-200 bg-white p-5 hover:shadow-md">
+<Card class="flex items-center gap-4 border-slate-200 bg-white p-5">
 	{#if icon}
 		<div
 			class={cn(

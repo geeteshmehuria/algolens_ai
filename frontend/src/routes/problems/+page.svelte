@@ -130,8 +130,9 @@
 					</TableHeader>
 					<TableBody>
 						{#each filteredProblems as problem}
+							{@const diffBorder = problem.difficulty === 'Easy' ? 'border-l-emerald-400' : problem.difficulty === 'Medium' ? 'border-l-amber-400' : 'border-l-rose-400'}
 							<TableRow class="border-slate-200 hover:bg-slate-50/50 transition-all">
-								<TableCell class="font-bold text-slate-900 pl-6 py-4">{problem.title}</TableCell>
+								<TableCell class="border-l-[3px] {diffBorder} font-bold text-slate-900 pl-6 py-4">{problem.title}</TableCell>
 								<TableCell class="py-4">
 									<span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
 										{topics.find(t => t.id === problem.topic_id)?.name || 'General'}

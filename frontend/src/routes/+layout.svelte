@@ -16,6 +16,7 @@
 	let user = $state<{ full_name?: string; email?: string } | null>(null);
 	let loading = $state(true);
 	let streak = $state<number | null>(null);
+	let revisionDue = $state(0);
 	let roles = $state<string[] | null>(null);
 	// Mobile slide-in sidebar (no effect on lg+ where the sidebar is always shown)
 	let sidebarOpen = $state(false);
@@ -64,10 +65,14 @@
 					localStorage.removeItem('user');
 				}
 			}
-			// Fetch streak if not loaded yet
+			// Fetch streak + revision-due count if not loaded yet (one summary call
+			// already made app-wide; reused here for the sidebar badge).
 			if (streak === null) {
-				api<{ streak: number }>('/dashboard/summary')
-					.then((summary) => (streak = summary.streak))
+				api<{ streak: number; revision_due_count: number }>('/dashboard/summary')
+					.then((summary) => {
+						streak = summary.streak;
+						revisionDue = summary.revision_due_count ?? 0;
+					})
 					.catch(() => (streak = null));
 			}
 			// Load roles once to decide which admin-only nav items to show.
@@ -80,6 +85,7 @@
 			isAuthenticated = false;
 			user = null;
 			streak = null;
+			revisionDue = 0;
 			roles = null;
 		}
 	});
@@ -143,7 +149,12 @@
 						<svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d={item.icon} />
 						</svg>
-						<span>{item.name}</span>
+						<span class="flex-1">{item.name}</span>
+						{#if item.name === 'Revision' && revisionDue > 0}
+							<span class="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700" aria-label="{revisionDue} due">
+								{revisionDue}
+							</span>
+						{/if}
 					</a>
 				{/each}
 			</nav>
