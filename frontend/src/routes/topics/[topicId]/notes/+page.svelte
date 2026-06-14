@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
 	import { getToken } from '$lib/auth';
+	import { loadContents } from '$lib/stores/common';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import LoadingState from '$lib/components/app/LoadingState.svelte';
@@ -107,11 +108,33 @@
 
 	async function loadRoles() {
 		try {
-			const me = await api<{ roles: string[] }>('/auth/me');
-			isAdmin = me.roles?.includes('admin') ?? false;
+			// Roles come from the cached /common/contents bootstrap the layout already
+			// fetched — avoids a duplicate /auth/me call on every notes-page visit.
+			const c = await loadContents();
+			isAdmin = c.user.roles?.includes('admin') ?? false;
 		} catch {
 			isAdmin = false;
 		}
+	}
+
+	// Patch the cached sidebar entry for the current topic in place instead of
+	// refetching the whole /me/topic-notes list after every small mutation.
+	function patchLocalTopic(opts: { state?: Record<string, any>; lastQuiz?: any }) {
+		const idx = topicsList.findIndex((t) => t.id === topicId);
+		if (idx === -1) return;
+		const t = topicsList[idx];
+		const next = { ...t };
+		if (opts.state) {
+			const base = t.state ?? {
+				status: 'reading',
+				is_bookmarked: false,
+				completed_sections_count: 0,
+				last_read_on: null
+			};
+			next.state = { ...base, ...opts.state };
+		}
+		if (opts.lastQuiz !== undefined) next.last_quiz = opts.lastQuiz;
+		topicsList[idx] = next;
 	}
 
 	async function loadNoteData(id: number) {
@@ -156,7 +179,7 @@
 		try {
 			const res = await api<{ is_bookmarked: boolean }>(`/topics/${topicId}/notes/bookmark`, { method: 'POST' });
 			userState.is_bookmarked = res.is_bookmarked;
-			await loadTopicsSummary();
+			patchLocalTopic({ state: { is_bookmarked: res.is_bookmarked } });
 		} catch (e) {
 			console.error('Bookmark toggle failed', e);
 		}
@@ -170,7 +193,7 @@
 				body: JSON.stringify({ section_key: key, completed })
 			});
 			userState.completed_sections = res.completed_sections;
-			await loadTopicsSummary();
+			patchLocalTopic({ state: { completed_sections_count: res.completed_sections.length } });
 		} catch (e) {
 			console.error('Failed to update progress', e);
 		}
@@ -197,7 +220,7 @@
 				body: JSON.stringify({ status: 'completed' })
 			});
 			userState.status = res.status;
-			await loadTopicsSummary();
+			patchLocalTopic({ state: { status: res.status } });
 			alert('Topic marked as Completed! Great job! 🎉');
 		} catch (e) {
 			console.error('Failed to complete topic', e);
@@ -407,9 +430,7 @@
 					<!-- 3. Quiz View Mode -->
 					<QuizRunner
 						noteId={noteDetails.id}
-						onQuizCompleted={async () => {
-							await loadTopicsSummary();
-						}}
+						onQuizCompleted={(score, total) => patchLocalTopic({ lastQuiz: { score, total } })}
 					/>
 				{/if}
 			{/if}

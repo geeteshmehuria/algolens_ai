@@ -3,13 +3,38 @@ import pytest
 from unittest.mock import patch
 from sqlmodel import Session
 
-from app.models import DSATopic
+from app.config import settings as app_settings
+from app.models import DSATopic, TopicNote, TopicQuizQuestion
 from app.services.note_service import (
     generate_topic_notes,
     generate_topic_quiz,
     grade_quiz_submission,
 )
 from app.services.ai_service import AIGenerationError
+
+
+def _published_note(session: Session, topic_id: int) -> TopicNote:
+    note = TopicNote(topic_id=topic_id, status="published", content={})
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    return note
+
+
+def _quiz_question(session: Session, note_id: int, position: int, kind: str, **kw):
+    q = TopicQuizQuestion(
+        note_id=note_id,
+        position=position,
+        kind=kind,
+        question=kw.get("question", f"q{position}"),
+        options=kw.get("options"),
+        correct_answer=kw.get("correct_answer", "a"),
+        answer_explanation=kw.get("answer_explanation", "e"),
+    )
+    session.add(q)
+    session.commit()
+    session.refresh(q)
+    return q
 
 
 @pytest.fixture
@@ -265,15 +290,19 @@ def test_quiz_generation_and_grading(
 
     # Mock Quiz generation
     mock_call.reset_mock()
-    mock_call.side_effect = [
-        (mock_quiz(), 20, 30, 150),  # Quiz gen
-        ({"correct": True}, 5, 5, 50),  # Mock AI grading for question 2 (short_answer)
-    ]
+    mock_call.side_effect = [(mock_quiz(), 20, 30, 150)]  # Quiz gen
 
     questions = generate_topic_quiz(session, note.id, user.id)
     assert len(questions) == 2
     assert questions[0].kind == "mcq"
     assert questions[1].kind == "short_answer"
+
+    # Free-form answers are now graded in ONE batched AI call returning a
+    # {"grades": [...]} array keyed by question id.
+    mock_call.reset_mock()
+    mock_call.side_effect = [
+        ({"grades": [{"id": questions[1].id, "correct": True}]}, 5, 5, 50),
+    ]
 
     # Submit quiz
     answers = [
@@ -285,7 +314,73 @@ def test_quiz_generation_and_grading(
     ]
 
     attempt, results = grade_quiz_submission(session, note.id, user.id, answers)
+
+    # Exactly one Gemini call for grading all free-form answers (here: 1 question).
+    assert mock_call.call_count == 1
     assert attempt.score == 2
     assert attempt.total == 2
     assert results[0]["correct"] is True
     assert results[1]["correct"] is True
+
+
+@patch("app.services.note_service._call_gemini_with_usage")
+def test_free_form_grading_is_batched_into_one_call(
+    mock_call, session: Session, topic: DSATopic, user, monkeypatch
+):
+    # Force AI path regardless of the machine's .env.
+    monkeypatch.setattr(app_settings, "GOOGLE_GEMINI_API_KEY", "test-key")
+
+    note = _published_note(session, topic.id)
+    q1 = _quiz_question(session, note.id, 1, "short_answer", correct_answer="a1")
+    q2 = _quiz_question(session, note.id, 2, "dry_run", correct_answer="a2")
+
+    mock_call.side_effect = [
+        (
+            {
+                "grades": [
+                    {"id": q1.id, "correct": True},
+                    {"id": q2.id, "correct": False},
+                ]
+            },
+            5,
+            5,
+            50,
+        ),
+    ]
+
+    answers = [
+        {"question_id": str(q1.id), "answer": "my answer"},
+        {"question_id": str(q2.id), "answer": "wrong"},
+    ]
+    attempt, results = grade_quiz_submission(session, note.id, user.id, answers)
+
+    # Two free-form questions, but only ONE Gemini call (batched).
+    assert mock_call.call_count == 1
+    assert attempt.score == 1
+    by_id = {r["question_id"]: r for r in results}
+    assert by_id[q1.id]["correct"] is True
+    assert by_id[q2.id]["correct"] is False
+
+
+@patch("app.services.note_service._call_gemini_with_usage")
+def test_mcq_only_grading_makes_no_ai_calls(
+    mock_call, session: Session, topic: DSATopic, user
+):
+    note = _published_note(session, topic.id)
+    q = _quiz_question(
+        session,
+        note.id,
+        1,
+        "mcq",
+        options=["a", "b", "c", "d"],
+        correct_answer="1",
+    )
+
+    attempt, results = grade_quiz_submission(
+        session, note.id, user.id, [{"question_id": str(q.id), "answer": "1"}]
+    )
+
+    # No free-form answers -> no Gemini call at all.
+    assert mock_call.call_count == 0
+    assert attempt.score == 1
+    assert results[0]["correct"] is True

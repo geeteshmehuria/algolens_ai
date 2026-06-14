@@ -555,23 +555,35 @@ def grade_quiz_submission(
     score = 0
     total = len(db_questions)
 
+    # First pass: keep the submission order, exact-match where we can, and collect
+    # every free-form (short_answer/dry_run) answer so they can be graded in ONE
+    # batched Gemini call instead of one call per question.
+    parsed: List[Tuple[int, TopicQuizQuestion, str]] = []
+    free_form_items: List[Dict[str, Any]] = []
     for ans_dict in answers:
         q_id = int(ans_dict.get("question_id", 0))
         user_ans = ans_dict.get("answer", "").strip()
-
         if q_id not in q_map:
             continue
-
         q = q_map[q_id]
-        correct = False
-        feedback_explanation = q.answer_explanation
+        parsed.append((q_id, q, user_ans))
+        if q.kind not in ("mcq", "complexity"):
+            free_form_items.append(
+                {
+                    "id": q_id,
+                    "question": q.question,
+                    "correct_answer": q.correct_answer,
+                    "user_answer": user_ans,
+                }
+            )
 
+    ai_grades = _grade_free_form_batch(free_form_items)
+
+    for q_id, q, user_ans in parsed:
         if q.kind in ("mcq", "complexity"):
-            # exact match
             correct = user_ans.lower() == q.correct_answer.lower()
         else:
-            # short_answer or dry_run. Use Gemini for grading.
-            correct = _grade_with_ai(q.question, q.correct_answer, user_ans)
+            correct = ai_grades.get(q_id, user_ans.lower() == q.correct_answer.lower())
 
         if correct:
             score += 1
@@ -582,7 +594,7 @@ def grade_quiz_submission(
                 "correct": correct,
                 "your_answer": user_ans,
                 "expected": q.correct_answer if not correct else None,
-                "explanation": feedback_explanation,
+                "explanation": q.answer_explanation,
             }
         )
 
@@ -597,24 +609,52 @@ def grade_quiz_submission(
     return attempt, results
 
 
-def _grade_with_ai(question: str, correct_answer: str, user_answer: str) -> bool:
-    """Helper to grade free-form answers using a cheap Gemini model call."""
-    if not ai_available():
-        # Fallback to simple exact match if AI is down
-        return user_answer.lower() == correct_answer.lower()
+def _grade_free_form_batch(items: List[Dict[str, Any]]) -> Dict[int, bool]:
+    """Grade all free-form answers in a SINGLE Gemini call.
 
+    ``items``: ``[{"id", "question", "correct_answer", "user_answer"}]``.
+    Returns ``{question_id: is_correct}``. Falls back to case-insensitive exact
+    match for everything if AI is unavailable or the call/parse fails, and for
+    any individual item the model omits — so grading never hard-fails.
+    """
+
+    def _exact(it: Dict[str, Any]) -> bool:
+        return it["user_answer"].strip().lower() == it["correct_answer"].strip().lower()
+
+    if not items:
+        return {}
+    if not ai_available():
+        return {it["id"]: _exact(it) for it in items}
+
+    payload = [
+        {
+            "id": it["id"],
+            "question": it["question"],
+            "correct_answer": it["correct_answer"],
+            "student_answer": it["user_answer"],
+        }
+        for it in items
+    ]
     prompt = (
-        "You are an automated grading system. Grade the student's answer against the correct model answer.\n"
-        "Be lenient on exact wording, syntax, spacing, and capitalization — focus entirely on conceptual correctness.\n\n"
-        f"Question: {question}\n"
-        f"Correct Answer: {correct_answer}\n"
-        f"Student Answer: {user_answer}\n\n"
-        'Return JSON: {"correct": true/false}'
+        "You are an automated grading system. Grade EACH student answer against its "
+        "correct model answer. Be lenient on wording, syntax, spacing, and "
+        "capitalization — judge conceptual correctness only.\n\n"
+        f"Items (JSON array): {json.dumps(payload)}\n\n"
+        'Return JSON: {"grades": [{"id": <id>, "correct": true|false}, ...]} with '
+        "exactly one entry per item."
     )
 
     try:
         data, _, _, _ = _call_gemini_with_usage(prompt, temperature=0.1)
-        return bool(data.get("correct", False))
+        grades: Dict[int, bool] = {}
+        for g in data.get("grades", []):
+            try:
+                grades[int(g["id"])] = bool(g.get("correct", False))
+            except (KeyError, TypeError, ValueError):
+                continue
+        # Any item the model skipped falls back to exact match.
+        for it in items:
+            grades.setdefault(it["id"], _exact(it))
+        return grades
     except Exception:
-        # Fallback if anything goes wrong
-        return user_answer.lower() == correct_answer.lower()
+        return {it["id"]: _exact(it) for it in items}
