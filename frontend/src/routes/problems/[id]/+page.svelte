@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
@@ -233,19 +233,53 @@
 	}
 
 	// Animation Controls
+	function startPlayback() {
+		clearInterval(playInterval);
+		playInterval = setInterval(() => {
+			if (animationData && currentStepIndex < animationData.steps.length - 1) {
+				currentStepIndex++;
+			} else {
+				clearInterval(playInterval);
+				isPlaying = false;
+			}
+		}, playbackSpeed);
+	}
+
 	function togglePlay() {
+		if (!animationData) return;
+		// Restart from the beginning if we're paused at the final step
+		if (!isPlaying && currentStepIndex >= animationData.steps.length - 1) {
+			currentStepIndex = 0;
+		}
 		isPlaying = !isPlaying;
-		if (isPlaying) {
-			playInterval = setInterval(() => {
-				if (animationData && currentStepIndex < animationData.steps.length - 1) {
-					currentStepIndex++;
-				} else {
-					clearInterval(playInterval);
-					isPlaying = false;
-				}
-			}, playbackSpeed);
-		} else {
-			clearInterval(playInterval);
+		if (isPlaying) startPlayback();
+		else clearInterval(playInterval);
+	}
+
+	// Speed control: 0.5× = 3000ms, 1× = 1500ms, 2× = 750ms. Restart the
+	// interval mid-playback so the new cadence applies immediately.
+	function setSpeed(ms: number) {
+		playbackSpeed = ms;
+		if (isPlaying) startPlayback();
+	}
+
+	// Keyboard shortcuts while the Animation tab is active. Ignored when a
+	// text field is focused (e.g. code editor / notes) or the range slider has
+	// focus (native arrow handling there moves the scrubber instead).
+	function handleAnimationKeys(e: KeyboardEvent) {
+		if (activeTab !== 'animation' || !animationData) return;
+		const el = e.target as HTMLElement | null;
+		const tag = el?.tagName;
+		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable) return;
+		if (e.key === 'ArrowRight') {
+			e.preventDefault();
+			stepNext();
+		} else if (e.key === 'ArrowLeft') {
+			e.preventDefault();
+			stepPrev();
+		} else if (e.key === ' ' || e.key === 'Spacebar') {
+			e.preventDefault();
+			togglePlay();
 		}
 	}
 
@@ -254,6 +288,8 @@
 		isPlaying = false;
 		currentStepIndex = 0;
 	}
+
+	onDestroy(() => clearInterval(playInterval));
 
 	function stepNext() {
 		if (animationData && currentStepIndex < animationData.steps.length - 1) {
@@ -267,6 +303,8 @@
 		}
 	}
 </script>
+
+<svelte:window onkeydown={handleAnimationKeys} />
 
 {#if loading}
 	<LoadingState message="Opening problem statement…" class="min-h-[400px]" />
@@ -535,6 +573,31 @@
 									Step {currentStepIndex + 1} / {animationData.steps.length}
 								</span>
 								{@render regenButton(handleGenerateAnimation, isGeneratingAnimation)}
+							</div>
+
+							<!-- Scrubber + speed -->
+							<div class="flex items-center gap-3">
+								<input
+									type="range"
+									min="0"
+									max={animationData.steps.length - 1}
+									bind:value={currentStepIndex}
+									aria-label="Animation timeline"
+									aria-valuetext="Step {currentStepIndex + 1} of {animationData.steps.length}"
+									class="h-2 flex-1 cursor-pointer accent-blue-600"
+								/>
+								<div class="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label="Playback speed">
+									{#each [{ label: '0.5×', ms: 3000 }, { label: '1×', ms: 1500 }, { label: '2×', ms: 750 }] as opt}
+										<button
+											type="button"
+											onclick={() => setSpeed(opt.ms)}
+											aria-pressed={playbackSpeed === opt.ms}
+											class="rounded-md px-2 py-1 text-[11px] font-bold transition-colors {playbackSpeed === opt.ms ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"
+										>
+											{opt.label}
+										</button>
+									{/each}
+								</div>
 							</div>
 
 							<!-- Step Description -->
