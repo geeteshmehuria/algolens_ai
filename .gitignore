@@ -61,3 +61,6 @@ testing-agent/reports/screenshots/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Keep the frontend env template tracked (overrides frontend/.env.* above)
+!frontend/.env.example

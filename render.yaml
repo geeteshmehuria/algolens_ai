@@ -1,0 +1,36 @@
+# Render Blueprint for AlgoLens AI backend (FastAPI).
+# Frontend is deployed separately on Vercel (static SvelteKit SPA).
+#
+# Secrets (DATABASE_URL, JWT_SECRET, GOOGLE_GEMINI_API_KEY) use `sync: false`,
+# so Render prompts for them in the dashboard and they are NEVER stored in git.
+services:
+  - type: web
+    name: algolens-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    # Pick the region closest to your Aiven PostgreSQL to minimise DB latency.
+    # Options: oregon, ohio, virginia, frankfurt, singapore.
+    region: singapore
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      # --- Secrets: set these in the Render dashboard (never committed) ---
+      - key: DATABASE_URL        # Aiven URL, MUST end with ?sslmode=require
+        sync: false
+      - key: JWT_SECRET          # python -c "import secrets;print(secrets.token_urlsafe(48))"
+        sync: false
+      - key: FRONTEND_URL        # your Vercel URL, e.g. https://algolens-ai.vercel.app
+        sync: false
+      - key: CORS_ORIGINS        # usually same as FRONTEND_URL (optional extras)
+        sync: false
+      - key: GOOGLE_GEMINI_API_KEY  # optional; AI endpoints return 503 without it
+        sync: false

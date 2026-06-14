@@ -57,3 +57,13 @@ def read_root():
         "version": "1.0.0",
         "docs_url": "/docs",
     }
+
+
+@app.get("/health")
+def health():
+    """Liveness probe for the hosting platform (Render health check).
+
+    Intentionally does not touch the database so a transient DB blip does not
+    flap the platform health check and recycle the instance.
+    """
+    return {"status": "ok"}
