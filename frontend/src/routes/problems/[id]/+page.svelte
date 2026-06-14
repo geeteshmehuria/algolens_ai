@@ -9,6 +9,7 @@
 	import { api } from '$lib/api';
 	import LoadingState from '$lib/components/app/LoadingState.svelte';
 	import DifficultyBadge from '$lib/components/app/DifficultyBadge.svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 
 	interface Problem {
 		id: number;
@@ -69,6 +70,10 @@
 	// AI Explanation state
 	let aiExplanation = $state<AIExplanation | null>(null);
 	let isGeneratingExplanation = $state(false);
+	// Per-feature errors so a failure in one generator can't mask another's
+	// content. `aiError` is kept for the AI code-review / hint flows.
+	let explanationError = $state('');
+	let animationError = $state('');
 	let aiError = $state('');
 
 	// User problem state (bookmark / note / confidence)
@@ -105,6 +110,15 @@
 			console.error(e);
 		} finally {
 			loading = false;
+		}
+
+		// Auto-generate the learning content once the problem is available — the
+		// user no longer has to click "Generate". Both endpoints are cached
+		// server-side, so repeat visits are cheap. Fire-and-forget (each manages
+		// its own loading/error state); honest errors still surface per tab.
+		if (problem) {
+			handleGenerateExplanation();
+			handleGenerateAnimation();
 		}
 	});
 
@@ -144,14 +158,14 @@
 		}
 	}
 
-	// AI Explanations Generator
+	// AI Explanations Generator (also powers the Pseudocode tab)
 	async function handleGenerateExplanation() {
 		isGeneratingExplanation = true;
-		aiError = '';
+		explanationError = '';
 		try {
 			aiExplanation = await api(`/ai/generate-explanation/${problemId}`, { method: 'POST' });
 		} catch (e: any) {
-			aiError = e.message || 'Failed to generate explanation.';
+			explanationError = e.message || 'Failed to generate explanation.';
 		} finally {
 			isGeneratingExplanation = false;
 		}
@@ -160,12 +174,12 @@
 	// AI Animation Steps Generator
 	async function handleGenerateAnimation() {
 		isGeneratingAnimation = true;
-		aiError = '';
+		animationError = '';
 		try {
 			animationData = await api(`/ai/generate-animation/${problemId}`, { method: 'POST' });
 			currentStepIndex = 0;
 		} catch (e: any) {
-			aiError = e.message || 'Failed to generate animation.';
+			animationError = e.message || 'Failed to generate animation.';
 		} finally {
 			isGeneratingAnimation = false;
 		}
@@ -270,6 +284,23 @@
 		</Card>
 	</div>
 {:else if problem}
+	<!-- Small, secondary control for re-running a generator after content exists -->
+	{#snippet regenButton(action: () => void, busy: boolean)}
+		<Button
+			variant="ghost"
+			size="sm"
+			class="h-7 gap-1.5 px-2.5 text-[11px] font-semibold text-slate-500 hover:text-blue-600"
+			onclick={action}
+			disabled={busy}
+			aria-label="Regenerate"
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5 {busy ? 'animate-spin' : ''}">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+			</svg>
+			{busy ? 'Regenerating…' : 'Regenerate'}
+		</Button>
+	{/snippet}
+
 	<div class="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-theme(spacing.16)-4rem)]">
 		<!-- Left Side: Problem Statement (40%) -->
 		<Card class="lg:col-span-2 flex flex-col h-full overflow-y-auto border-slate-200 bg-white p-6 gap-4">
@@ -362,21 +393,25 @@
 
 				<!-- Tab 1: Logic -->
 				<Tabs.Content value="logic" class="flex-1 flex flex-col p-6 m-0 outline-none">
-					{#if !aiExplanation}
-						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[340px] m-auto">
-							<h3 class="font-title text-base font-bold text-slate-900">Visual DSA Explanations</h3>
-							<p class="text-xs text-slate-500 leading-relaxed mb-2">
-								Generate a step-by-step logic review including optimal space/time complexities tailored by Google Gemini.
-							</p>
-							<Button class="bg-blue-600 hover:bg-blue-700 text-white w-full h-10 text-xs" onclick={handleGenerateExplanation} disabled={isGeneratingExplanation}>
-								{#if isGeneratingExplanation}Generating explanation...{:else}Generate AI Explanation{/if}
-							</Button>
-							{#if aiError}
-								<p class="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-3 leading-relaxed">{aiError}</p>
-							{/if}
-						</div>
-					{:else}
+					{#if isGeneratingExplanation && !aiExplanation}
+						<!-- Skeleton while the explanation generates -->
 						<div class="flex flex-col gap-5">
+							<div class="flex flex-col gap-2">
+								<Skeleton class="h-4 w-24" />
+								<Skeleton class="h-20 w-full rounded-xl" />
+							</div>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div class="flex flex-col gap-2"><Skeleton class="h-3 w-20" /><Skeleton class="h-24 w-full rounded-xl" /></div>
+								<div class="flex flex-col gap-2"><Skeleton class="h-3 w-28" /><Skeleton class="h-24 w-full rounded-xl" /></div>
+							</div>
+							<div class="flex gap-6 py-3"><Skeleton class="h-6 w-36 rounded-full" /><Skeleton class="h-6 w-36 rounded-full" /></div>
+						</div>
+					{:else if aiExplanation}
+						<div class="flex flex-col gap-5">
+							<div class="flex items-center justify-between">
+								<h3 class="font-title text-base font-bold text-slate-900">AI Explanation</h3>
+								{@render regenButton(handleGenerateExplanation, isGeneratingExplanation)}
+							</div>
 							<div class="flex flex-col gap-1.5">
 								<h4 class="text-sm font-bold text-slate-900">Core Idea</h4>
 								<p class="text-xs text-slate-600 leading-relaxed bg-slate-50 border border-slate-100 p-4 rounded-xl">{aiExplanation.simple_explanation}</p>
@@ -415,25 +450,35 @@
 								</div>
 							{/if}
 						</div>
+					{:else}
+						<!-- Honest error: never fabricate explanation content -->
+						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[360px] m-auto">
+							<h3 class="font-title text-base font-bold text-slate-900">Couldn't generate explanation</h3>
+							<p class="text-xs text-slate-500 leading-relaxed">{explanationError || 'No AI explanation is available yet for this problem.'}</p>
+							<Button class="bg-blue-600 hover:bg-blue-700 text-white w-full h-10 text-xs" onclick={handleGenerateExplanation} disabled={isGeneratingExplanation}>
+								{#if isGeneratingExplanation}Generating…{:else}Try again{/if}
+							</Button>
+						</div>
 					{/if}
 				</Tabs.Content>
 
 				<!-- Tab 2: Pseudocode -->
 				<Tabs.Content value="pseudocode" class="flex-1 flex flex-col p-6 m-0 outline-none h-full">
-					{#if !aiExplanation}
-						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[340px] m-auto">
-							<h3 class="font-title text-base font-bold text-slate-900">Pseudocode Viewer</h3>
-							<p class="text-xs text-slate-500 leading-relaxed mb-2">
-								Please generate the AI Explanation to load the structured pseudocode template.
-							</p>
-							<Button class="bg-blue-600 hover:bg-blue-700 text-white w-full h-10 text-xs" onclick={handleGenerateExplanation} disabled={isGeneratingExplanation}>
-								{#if isGeneratingExplanation}Generating explanation...{:else}Generate AI Explanation{/if}
-							</Button>
+					{#if isGeneratingExplanation && !aiExplanation}
+						<!-- Skeleton while the explanation (which carries pseudocode) generates -->
+						<div class="flex flex-col gap-2 flex-1">
+							<Skeleton class="h-4 w-40" />
+							<div class="flex flex-col gap-2 rounded-xl border border-slate-200 p-4 flex-1">
+								{#each Array(8) as _, i}
+									<Skeleton class="h-3.5" style="width: {[70, 85, 55, 90, 60, 80, 50, 75][i]}%" />
+								{/each}
+							</div>
 						</div>
-					{:else}
+					{:else if aiExplanation}
 						<div class="flex flex-col border border-slate-200 rounded-xl overflow-hidden flex-1 h-full bg-slate-50/50">
-							<div class="bg-slate-50 border-b border-slate-200 px-4 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-wider">
-								Pseudocode Template
+							<div class="flex items-center justify-between bg-slate-50 border-b border-slate-200 px-4 py-1.5">
+								<span class="font-bold text-[11px] text-slate-500 uppercase tracking-wider">Pseudocode Template</span>
+								{@render regenButton(handleGenerateExplanation, isGeneratingExplanation)}
 							</div>
 							<div class="flex flex-col font-mono text-[12.5px] py-2 overflow-y-auto bg-white flex-1 leading-relaxed">
 								{#each aiExplanation.pseudocode as line, index}
@@ -445,25 +490,37 @@
 								{/each}
 							</div>
 						</div>
+					{:else}
+						<!-- Honest error: pseudocode comes from the explanation generator -->
+						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[360px] m-auto">
+							<h3 class="font-title text-base font-bold text-slate-900">Couldn't load pseudocode</h3>
+							<p class="text-xs text-slate-500 leading-relaxed">{explanationError || 'No pseudocode is available yet for this problem.'}</p>
+							<Button class="bg-blue-600 hover:bg-blue-700 text-white w-full h-10 text-xs" onclick={handleGenerateExplanation} disabled={isGeneratingExplanation}>
+								{#if isGeneratingExplanation}Generating…{:else}Try again{/if}
+							</Button>
+						</div>
 					{/if}
 				</Tabs.Content>
 
 				<!-- Tab 3: Animation -->
 				<Tabs.Content value="animation" class="flex-1 flex flex-col p-6 m-0 outline-none">
-					{#if !animationData}
-						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[340px] m-auto">
-							<h3 class="font-title text-base font-bold text-slate-900">Visual Logic Player</h3>
-							<p class="text-xs text-slate-500 leading-relaxed mb-2">
-								Generate visual representations (Array nodes, Stack blocks, DP state grids) based on Gemini AI step data.
-							</p>
-							<Button class="bg-blue-600 hover:bg-blue-700 text-white w-full h-10 text-xs" onclick={handleGenerateAnimation} disabled={isGeneratingAnimation}>
-								{#if isGeneratingAnimation}Creating Visual Data...{:else}Generate Animation Data{/if}
-							</Button>
-							{#if aiError}
-								<p class="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-3 leading-relaxed">{aiError}</p>
-							{/if}
+					{#if isGeneratingAnimation && !animationData}
+						<!-- Skeleton while the animation steps generate -->
+						<div class="flex flex-col gap-4 flex-1">
+							<div class="flex items-center gap-2">
+								<Skeleton class="h-8 w-20 rounded-lg" />
+								<Skeleton class="h-8 w-24 rounded-lg" />
+								<Skeleton class="h-8 w-20 rounded-lg" />
+								<Skeleton class="ml-auto h-7 w-24 rounded-full" />
+							</div>
+							<Skeleton class="h-16 w-full rounded-xl" />
+							<div class="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 p-6">
+								{#each Array(6) as _}
+									<Skeleton class="h-14 w-14 rounded-xl" />
+								{/each}
+							</div>
 						</div>
-					{:else}
+					{:else if animationData}
 						<div class="flex flex-col gap-4 flex-1">
 							<!-- Player Controls -->
 							<div class="flex items-center gap-2 flex-wrap">
@@ -477,6 +534,7 @@
 								<span class="text-xs font-bold text-slate-500 ml-auto bg-slate-100 px-3 py-1 rounded-full">
 									Step {currentStepIndex + 1} / {animationData.steps.length}
 								</span>
+								{@render regenButton(handleGenerateAnimation, isGeneratingAnimation)}
 							</div>
 
 							<!-- Step Description -->
@@ -628,6 +686,15 @@
 									</div>
 								{/if}
 							</div>
+						</div>
+					{:else}
+						<!-- Honest error: never fabricate animation steps -->
+						<div class="flex flex-col items-center justify-center text-center gap-3 max-w-[360px] m-auto">
+							<h3 class="font-title text-base font-bold text-slate-900">Couldn't generate animation</h3>
+							<p class="text-xs text-slate-500 leading-relaxed">{animationError || 'No animation is available yet for this problem.'}</p>
+							<Button class="bg-blue-600 hover:bg-blue-700 text-white w-full h-10 text-xs" onclick={handleGenerateAnimation} disabled={isGeneratingAnimation}>
+								{#if isGeneratingAnimation}Generating…{:else}Try again{/if}
+							</Button>
 						</div>
 					{/if}
 				</Tabs.Content>
