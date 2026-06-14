@@ -38,6 +38,30 @@ class UserProblemState(BaseModel):
     confidence: Optional[int] = None
 
 
+class RunTestsRequest(BaseModel):
+    code: str = PydanticField(max_length=20_000)
+    language: str = "python"
+
+
+class TestCaseResult(BaseModel):
+    input: str
+    expected: str
+    actual: Optional[str] = None
+    # 'manual' until a real sandbox exists; future: 'passed' | 'failed' | 'error'.
+    status: str = "manual"
+
+
+class RunTestsResponse(BaseModel):
+    # False until a sandboxed judge is wired up — we never fake pass/fail.
+    execution_supported: bool
+    message: str
+    language: str
+    cases: List[TestCaseResult]
+    passed: int
+    failed: int
+    total: int
+
+
 class LatestAttempt(BaseModel):
     """The user's most recent submission for a problem, used to rehydrate the
     editor + AI-review panel on reopen (after refresh or re-login)."""
@@ -138,6 +162,46 @@ def get_latest_attempt(
         test_results=getattr(attempt, "test_results", None),
         ai_review=ai_review,
         created_on=attempt.created_on,
+    )
+
+
+@router.post("/problems/{problem_id}/run-tests", response_model=RunTestsResponse)
+def run_tests(
+    problem_id: int,
+    payload: RunTestsRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Surface the problem's example cases for the learner to verify against.
+
+    SAFETY: this environment has no sandbox, so we deliberately do NOT execute
+    arbitrary user code on the server. We return the example inputs/expected
+    outputs with status 'manual' (never a fabricated pass/fail). The response
+    shape is the future contract for a real judge (Judge0/Docker) — only the
+    `execution_supported` flag and per-case `status`/`actual` would change.
+    """
+    problem = _require_problem(session, problem_id)
+    cases = [
+        TestCaseResult(
+            input=str(ex.get("input", "")),
+            expected=str(ex.get("output", "")),
+            actual=None,
+            status="manual",
+        )
+        for ex in (problem.examples or [])
+    ]
+    return RunTestsResponse(
+        execution_supported=False,
+        message=(
+            "Automated execution isn't available yet, so these cases aren't run "
+            "on the server. Compare your solution's output against the expected "
+            "results below, then submit for AI review."
+        ),
+        language=payload.language,
+        cases=cases,
+        passed=0,
+        failed=0,
+        total=len(cases),
     )
 
 

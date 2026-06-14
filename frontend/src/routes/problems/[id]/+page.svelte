@@ -67,6 +67,20 @@
 	let hintText = $state('');
 	let activeHintLevel = $state(0);
 
+	// Test-case runner state (execution is not server-side; see handleRunTests).
+	interface TestRun {
+		execution_supported: boolean;
+		message: string;
+		language: string;
+		cases: Array<{ input: string; expected: string; actual: string | null; status: string }>;
+		passed: number;
+		failed: number;
+		total: number;
+	}
+	let testRun = $state<TestRun | null>(null);
+	let isRunningTests = $state(false);
+	let testError = $state('');
+
 	// AI Explanation state
 	let aiExplanation = $state<AIExplanation | null>(null);
 	let isGeneratingExplanation = $state(false);
@@ -216,6 +230,23 @@
 			hintText = data.hint_text;
 		} catch (e: any) {
 			hintText = e.message || 'Failed to fetch hint.';
+		}
+	}
+
+	// Run sample test cases before AI review. Execution is not performed on the
+	// server (no sandbox); the response lists expected outputs for manual checking.
+	async function handleRunTests() {
+		isRunningTests = true;
+		testError = '';
+		try {
+			testRun = await api<TestRun>(`/problems/${problemId}/run-tests`, {
+				method: 'POST',
+				body: JSON.stringify({ code: submittedCode, language: 'python' })
+			});
+		} catch (e: any) {
+			testError = e.message || 'Failed to load test cases.';
+		} finally {
+			isRunningTests = false;
 		}
 	}
 
@@ -794,22 +825,69 @@
 				<!-- Tab 4: Code Editor -->
 				<Tabs.Content value="code" class="flex-1 flex flex-col p-0 m-0 outline-none h-full bg-slate-950">
 					<div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-						Python Sandbox (Python 3)
+						Python 3 Editor
 					</div>
 					<textarea aria-label="Python code editor" class="w-full flex-1 bg-slate-950 text-slate-100 font-mono text-[13px] p-5 outline-none resize-none leading-relaxed focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500/50" bind:value={submittedCode} spellcheck="false"></textarea>
 
 					<!-- Editor Buttons -->
-					<div class="flex items-center justify-between p-4 bg-slate-900 border-t border-slate-800">
+					<div class="flex items-center justify-between p-4 bg-slate-900 border-t border-slate-800 gap-2 flex-wrap">
 						<div class="flex gap-2">
 							<Button variant="outline" size="sm" class="text-[11px] h-8 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 bg-transparent" onclick={() => handleGetHint(1)}>Hint L1</Button>
 							<Button variant="outline" size="sm" class="text-[11px] h-8 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 bg-transparent" onclick={() => handleGetHint(2)}>Hint L2</Button>
 							<Button variant="outline" size="sm" class="text-[11px] h-8 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 bg-transparent" onclick={() => handleGetHint(3)}>Hint L3</Button>
 						</div>
 
-						<Button class="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-4 font-semibold" onclick={handleReviewCode} disabled={isSubmittingCode}>
-							{#if isSubmittingCode}Analyzing with AI...{:else}Review with AI{/if}
-						</Button>
+						<div class="flex items-center gap-2">
+							<Button variant="outline" size="sm" class="text-xs h-8 border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800 bg-transparent" onclick={handleRunTests} disabled={isRunningTests}>
+								{#if isRunningTests}Loading tests…{:else}▷ Run Test Cases{/if}
+							</Button>
+							<Button class="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-4 font-semibold" onclick={handleReviewCode} disabled={isSubmittingCode}>
+								{#if isSubmittingCode}Analyzing with AI...{:else}Review with AI{/if}
+							</Button>
+						</div>
 					</div>
+
+					<!-- Test Cases Panel -->
+					{#if testError}
+						<div class="border-t border-rose-900/40 bg-rose-950/40 p-4 text-xs text-rose-200">{testError}</div>
+					{:else if testRun}
+						<div class="max-h-64 overflow-y-auto border-t border-slate-800 bg-slate-900 p-4">
+							<div class="mb-3 flex items-center justify-between gap-3">
+								<span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Sample Test Cases</span>
+								<span class="rounded-full bg-slate-800 px-2.5 py-0.5 text-[11px] font-semibold text-slate-300">
+									{testRun.total} case{testRun.total === 1 ? '' : 's'}
+								</span>
+							</div>
+
+							{#if !testRun.execution_supported}
+								<p class="mb-3 flex items-start gap-1.5 rounded-lg border border-amber-900/40 bg-amber-950/30 p-2.5 text-[11px] leading-relaxed text-amber-200">
+									<span aria-hidden="true">ℹ️</span>
+									<span>{testRun.message}</span>
+								</p>
+							{/if}
+
+							{#if testRun.cases.length === 0}
+								<p class="text-xs text-slate-400">This problem has no sample cases to display.</p>
+							{:else}
+								<div class="flex flex-col gap-2">
+									{#each testRun.cases as tc, i}
+										<div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+											<div class="mb-1.5 flex items-center justify-between">
+												<span class="text-[11px] font-bold text-slate-400">Case {i + 1}</span>
+												<span class="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
+													{tc.status === 'manual' ? 'verify manually' : tc.status}
+												</span>
+											</div>
+											<div class="grid grid-cols-1 gap-1.5 font-mono text-[11px] text-slate-300 md:grid-cols-2">
+												<div><span class="text-slate-500">Input:</span> <span class="whitespace-pre-wrap">{tc.input || '—'}</span></div>
+												<div><span class="text-slate-500">Expected:</span> <span class="whitespace-pre-wrap">{tc.expected || '—'}</span></div>
+											</div>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
 
 					<!-- Hint Banner -->
 					{#if hintText}
