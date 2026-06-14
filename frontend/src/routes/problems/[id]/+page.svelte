@@ -90,6 +90,14 @@
 	let playInterval = $state<any>(null);
 	let playbackSpeed = $state(1500); // ms
 
+	// The animation is the single source of truth for the "current step"; the
+	// Pseudocode/Logic tabs read this derived value (they share currentStepIndex).
+	const activeStep = $derived(animationData ? animationData.steps[currentStepIndex] : null);
+	// Optional, backend-driven emphasis. We only highlight a complexity pill when
+	// a step *explicitly* carries `complexity_focus` ('time' | 'space') — we never
+	// infer a mapping ourselves, so when the data is absent the view is unchanged.
+	const focusedComplexity = $derived(activeStep?.complexity_focus ?? null);
+
 	// Fetch Data
 	onMount(async () => {
 		if (!localStorage.getItem('token')) {
@@ -469,11 +477,11 @@
 							<div class="flex gap-6 mt-2 border-t border-b border-slate-100 py-3 text-xs">
 								<div class="flex items-center gap-2">
 									<span class="font-semibold text-slate-500">Time Complexity:</span>
-									<Badge class="bg-blue-50 text-blue-700 border border-blue-200/50 hover:bg-blue-50 font-bold px-2.5 py-0.5 rounded-full">{aiExplanation.time_complexity}</Badge>
+									<Badge class="bg-blue-50 text-blue-700 border border-blue-200/50 hover:bg-blue-50 font-bold px-2.5 py-0.5 rounded-full transition-all {focusedComplexity === 'time' ? 'ring-2 ring-amber-400/70 scale-105' : ''}">{aiExplanation.time_complexity}</Badge>
 								</div>
 								<div class="flex items-center gap-2">
 									<span class="font-semibold text-slate-500">Space Complexity:</span>
-									<Badge class="bg-blue-50 text-blue-700 border border-blue-200/50 hover:bg-blue-50 font-bold px-2.5 py-0.5 rounded-full">{aiExplanation.space_complexity}</Badge>
+									<Badge class="bg-blue-50 text-blue-700 border border-blue-200/50 hover:bg-blue-50 font-bold px-2.5 py-0.5 rounded-full transition-all {focusedComplexity === 'space' ? 'ring-2 ring-amber-400/70 scale-105' : ''}">{aiExplanation.space_complexity}</Badge>
 								</div>
 							</div>
 
@@ -520,7 +528,7 @@
 							</div>
 							<div class="flex flex-col font-mono text-[12.5px] py-2 overflow-y-auto bg-white flex-1 leading-relaxed">
 								{#each aiExplanation.pseudocode as line, index}
-									{@const isHighlighted = animationData && animationData.steps[currentStepIndex]?.pseudocode_line === (index + 1)}
+									{@const isHighlighted = activeStep?.pseudocode_line === (index + 1)}
 									<div class="flex py-1.5 transition-all duration-200 border-l-3 {isHighlighted ? 'bg-amber-50/70 border-amber-500' : 'border-transparent'}">
 										<span class="w-12 text-right pr-4 text-slate-400 select-none font-bold text-[11px]">{index + 1}</span>
 										<span class="text-slate-800 whitespace-pre-wrap">{line}</span>
