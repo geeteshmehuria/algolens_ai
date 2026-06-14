@@ -347,8 +347,18 @@
 		</Button>
 	{/snippet}
 
-	<div class="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-theme(spacing.16)-4rem)]">
-		<!-- Left Side: Problem Statement (40%) -->
+	<div class="flex flex-col gap-4 h-[calc(100vh-theme(spacing.16)-4rem)]">
+		<!-- Breadcrumb -->
+		<nav class="flex items-center gap-1.5 text-xs font-medium text-slate-500" aria-label="Breadcrumb">
+			<a href="/problems" class="rounded text-slate-500 transition-colors hover:text-blue-600">Problems</a>
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5 text-slate-300" aria-hidden="true">
+				<path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+			</svg>
+			<span class="truncate font-semibold text-slate-700" aria-current="page">{problem.title}</span>
+		</nav>
+
+		<div class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-5">
+			<!-- Left Side: Problem Statement (40%) -->
 		<Card class="lg:col-span-2 flex flex-col h-full overflow-y-auto border-slate-200 bg-white p-6 gap-4">
 			<div class="flex justify-between items-center">
 				<DifficultyBadge difficulty={problem.difficulty} />
@@ -897,5 +907,6 @@
 				</Tabs.Content>
 			</Tabs.Root>
 		</Card>
+		</div>
 	</div>
 {/if}
