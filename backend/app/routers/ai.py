@@ -224,8 +224,23 @@ def get_hint(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Generate a leveled Socratic hint (1=nudge, 2=pattern, 3=approach) and log it."""
+    """Generate a leveled Socratic hint (1=nudge, 2=pattern, 3=approach).
+
+    Cached per (user, problem, level): once a hint exists it is served from the
+    DB so re-requesting the same hint costs zero AI tokens (consistent with the
+    shared explanation/animation caching)."""
     problem, topic_name, pattern_name = _load_problem(session, req.problem_id)
+
+    cached = session.exec(
+        select(AIHint).where(
+            AIHint.user_id == current_user.id,
+            AIHint.problem_id == req.problem_id,
+            AIHint.hint_level == req.hint_level,
+        )
+    ).first()
+    if cached:
+        return {"hint_level": cached.hint_level, "hint_text": cached.hint_text}
+
     try:
         hint_text = ai_service.generate_hint(
             problem, req.hint_level, topic_name, pattern_name
