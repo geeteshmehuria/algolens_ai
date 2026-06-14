@@ -1,4 +1,6 @@
 // Central API client — single place for the backend URL, auth header,
+import { getToken } from '$lib/auth';
+
 const rawApiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 export const API_BASE = rawApiUrl.replace(/\/+$/, '');
 
@@ -22,7 +24,7 @@ export async function api<T = any>(path: string, options: RequestInit = {}): Pro
 	}
 
 	const promise = (async () => {
-		const token = localStorage.getItem('token');
+		const token = getToken();
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 			...((options.headers as Record<string, string>) ?? {})

@@ -6,6 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { loadContents, clearCommonCache } from '$lib/stores/common';
+	import { getToken, getStoredUser, clearAuth, isAuthenticated as hasToken } from '$lib/auth';
 
 	let { children } = $props();
 
@@ -15,7 +16,7 @@
 	// Resolve auth synchronously at first render (SPA, ssr=false so localStorage is
 	// available) so the protected shell is NEVER rendered for a logged-out user —
 	// this is what prevents the dashboard "flash" before the login redirect.
-	let isAuthenticated = $state(browser && !!localStorage.getItem('token'));
+	let isAuthenticated = $state(browser && hasToken());
 	const isPublic = $derived(publicRoutes.includes(page.url.pathname));
 	let user = $state<{ full_name?: string; email?: string } | null>(null);
 	let streak = $state<number | null>(null);
@@ -42,8 +43,7 @@
 	const visibleMenuItems = $derived(menuItems.filter((item) => !item.adminOnly || isAdmin));
 
 	function logout() {
-		localStorage.removeItem('token');
-		localStorage.removeItem('user');
+		clearAuth();
 		clearCommonCache();
 		isAuthenticated = false;
 		user = null;
@@ -53,18 +53,12 @@
 	$effect(() => {
 		// Track pathname to re-run authentication check when navigating
 		const pathname = page.url.pathname;
-		const token = localStorage.getItem('token');
-		const storedUser = localStorage.getItem('user');
+		const token = getToken();
 
 		if (token) {
 			isAuthenticated = true;
-			if (storedUser) {
-				try {
-					user = JSON.parse(storedUser);
-				} catch (e) {
-					localStorage.removeItem('user');
-				}
-			}
+			const storedUser = getStoredUser<{ full_name?: string; email?: string }>();
+			if (storedUser) user = storedUser;
 			// One bootstrap call (`/common/contents`, cached) replaces the separate
 			// /auth/me + /dashboard/summary calls the shell used to make — it carries
 			// roles (for admin nav) plus the streak / revision-due counts.

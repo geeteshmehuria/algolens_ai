@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
+	import { getToken } from '$lib/auth';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import LoadingState from '$lib/components/app/LoadingState.svelte';
@@ -70,7 +71,7 @@
 	let loadSeq = 0;
 
 	onMount(() => {
-		if (!localStorage.getItem('token')) {
+		if (!getToken()) {
 			goto('/login');
 			return;
 		}
@@ -85,7 +86,7 @@
 	$effect(() => {
 		const id = topicId;
 		if (!id) return;
-		if (typeof localStorage !== 'undefined' && !localStorage.getItem('token')) return;
+		if (!getToken()) return;
 		loadNoteData(id);
 	});
 

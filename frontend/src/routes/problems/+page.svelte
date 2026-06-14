@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api } from '$lib/api';
+	import { getToken } from '$lib/auth';
 	import { loadMasterData } from '$lib/stores/common';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -35,8 +36,7 @@
 	let loading = $state(true);
 
 	onMount(async () => {
-		const token = localStorage.getItem('token');
-		if (!token) {
+		if (!getToken()) {
 			goto('/login');
 			return;
 		}

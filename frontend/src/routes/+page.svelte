@@ -1,14 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { isAuthenticated } from '$lib/auth';
 
 	onMount(() => {
-		const token = localStorage.getItem('token');
-		if (token) {
-			goto('/dashboard');
-		} else {
-			goto('/login');
-		}
+		goto(isAuthenticated() ? '/dashboard' : '/login');
 	});
 </script>
 

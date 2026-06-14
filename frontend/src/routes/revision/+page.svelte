@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
+	import { getToken } from '$lib/auth';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
@@ -18,7 +19,7 @@
 	let loading = $state(true);
 
 	onMount(async () => {
-		if (!localStorage.getItem('token')) {
+		if (!getToken()) {
 			goto('/login');
 			return;
 		}

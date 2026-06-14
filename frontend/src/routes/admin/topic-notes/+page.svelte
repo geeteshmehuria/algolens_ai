@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
+	import { getToken } from '$lib/auth';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 
@@ -43,22 +44,18 @@
 	let error = $state('');
 
 	onMount(async () => {
-		// Verify admin role via user object
-		const userStr = localStorage.getItem('user');
-		if (userStr) {
-			try {
-				const user = JSON.parse(userStr);
-				// If not admin, redirect
-				const me = await api('/auth/me');
-				if (!me.roles.includes('admin')) {
-					goto('/dashboard');
-					return;
-				}
-			} catch {
-				goto('/login');
+		// Verify admin role server-side (UI guard only; backend enforces require_admin).
+		if (!getToken()) {
+			goto('/login');
+			return;
+		}
+		try {
+			const me = await api('/auth/me');
+			if (!me.roles.includes('admin')) {
+				goto('/dashboard');
 				return;
 			}
-		} else {
+		} catch {
 			goto('/login');
 			return;
 		}

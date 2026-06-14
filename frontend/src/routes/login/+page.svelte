@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
+	import { isAuthenticated, setToken, setStoredUser } from '$lib/auth';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -16,7 +17,7 @@
 	let isLoading = $state(false);
 
 	onMount(() => {
-		if (localStorage.getItem('token')) {
+		if (isAuthenticated()) {
 			goto('/dashboard');
 		}
 		if (new URLSearchParams(window.location.search).get('reset') === 'success') {
@@ -42,10 +43,10 @@
 			});
 
 			if (isLogin) {
-				localStorage.setItem('token', data.access_token);
+				setToken(data.access_token);
 				try {
 					const profileData = await api('/auth/me');
-					localStorage.setItem('user', JSON.stringify(profileData));
+					setStoredUser(profileData);
 				} catch {
 					// profile fetch is best-effort — continue to dashboard without it
 				}

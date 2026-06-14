@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { api, ApiError } from '$lib/api';
+	import { getToken, getStoredUser, clearAuth } from '$lib/auth';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { Progress } from '$lib/components/ui/progress';
 	import { Button } from '$lib/components/ui/button';
@@ -26,17 +27,12 @@
 	let error = $state('');
 
 	let firstName = $derived.by(() => {
-		try {
-			const u = JSON.parse(localStorage.getItem('user') || '{}');
-			return (u.full_name || '').split(' ')[0] || '';
-		} catch {
-			return '';
-		}
+		const u = getStoredUser<{ full_name?: string }>();
+		return (u?.full_name || '').split(' ')[0] || '';
 	});
 
 	onMount(async () => {
-		const token = localStorage.getItem('token');
-		if (!token) {
+		if (!getToken()) {
 			goto('/login');
 			return;
 		}
@@ -50,8 +46,7 @@
 				.catch(() => (activity = []));
 		} catch (err: any) {
 			if (err instanceof ApiError && err.status === 401) {
-				localStorage.removeItem('token');
-				localStorage.removeItem('user');
+				clearAuth();
 				goto('/login');
 				return;
 			}

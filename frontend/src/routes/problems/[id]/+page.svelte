@@ -7,6 +7,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { api } from '$lib/api';
+	import { getToken } from '$lib/auth';
 	import LoadingState from '$lib/components/app/LoadingState.svelte';
 	import DifficultyBadge from '$lib/components/app/DifficultyBadge.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -114,7 +115,7 @@
 
 	// Fetch Data
 	onMount(async () => {
-		if (!localStorage.getItem('token')) {
+		if (!getToken()) {
 			goto('/login');
 			return;
 		}
