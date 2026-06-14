@@ -37,6 +37,19 @@
 			return;
 		}
 
+		// Importing is admin-only on the backend; bounce non-admins instead of
+		// showing a form that would 403 on submit.
+		try {
+			const me = await api<{ roles: string[] }>('/auth/me');
+			if (!me.roles?.includes('admin')) {
+				goto('/dashboard');
+				return;
+			}
+		} catch (e) {
+			goto('/dashboard');
+			return;
+		}
+
 		try {
 			[topics, patterns] = await Promise.all([
 				api<Topic[]>('/topics'),

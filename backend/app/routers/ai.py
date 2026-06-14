@@ -3,10 +3,11 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.database import get_session
+from app.services.rate_limit import RateLimiter
 from app.models import (
     DSAProblem,
     DSATopic,
@@ -25,17 +26,24 @@ router = APIRouter(prefix="/ai", tags=["Google Gemini AI"])
 
 logger = logging.getLogger(__name__)
 
+# Each call here spends Gemini tokens, so cap per-IP request volume. The cache
+# means repeat reads cost nothing; this throttles bursts of fresh generation.
+ai_limiter = RateLimiter("ai_generate", limit=20, window_seconds=60)
+
+# Hard ceiling on code we send to the model — also bounds DB row size and cost.
+MAX_CODE_CHARS = 20_000
+
 
 # --- Pydantic Schemas ---
 class CodeReviewRequest(BaseModel):
     problem_id: int
-    submitted_code: str
+    submitted_code: str = Field(min_length=1, max_length=MAX_CODE_CHARS)
     used_hint: bool = False
 
 
 class HintRequest(BaseModel):
     problem_id: int
-    hint_level: int
+    hint_level: int = Field(ge=1, le=3)
 
 
 # --- Helpers ---
@@ -77,7 +85,7 @@ def _ai_error(exc: Exception) -> HTTPException:
 
 
 # --- Endpoints ---
-@router.post("/generate-explanation/{problem_id}")
+@router.post("/generate-explanation/{problem_id}", dependencies=[Depends(ai_limiter)])
 def generate_explanation(
     problem_id: int,
     session: Session = Depends(get_session),
@@ -110,7 +118,7 @@ def generate_explanation(
     return {**content, "cached": False}
 
 
-@router.post("/generate-animation/{problem_id}")
+@router.post("/generate-animation/{problem_id}", dependencies=[Depends(ai_limiter)])
 def generate_animation(
     problem_id: int,
     session: Session = Depends(get_session),
@@ -154,7 +162,7 @@ def generate_animation(
     return {**content, "cached": False}
 
 
-@router.post("/review-code")
+@router.post("/review-code", dependencies=[Depends(ai_limiter)])
 def review_code(
     req: CodeReviewRequest,
     session: Session = Depends(get_session),
@@ -210,7 +218,7 @@ def review_code(
     return review
 
 
-@router.post("/hint")
+@router.post("/hint", dependencies=[Depends(ai_limiter)])
 def get_hint(
     req: HintRequest,
     session: Session = Depends(get_session),

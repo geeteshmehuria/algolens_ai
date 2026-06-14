@@ -19,7 +19,7 @@
 	}
 </script>
 
-<div class="border border-slate-200 bg-white rounded-2xl p-5 shadow-sm flex flex-col gap-4 sticky top-20">
+<div class="border border-slate-200 bg-white rounded-2xl p-5 shadow-sm flex flex-col gap-4">
 	<h3 class="text-xs font-bold text-slate-800 border-b border-slate-100 pb-2">Table of Contents</h3>
 
 	<nav class="flex flex-col gap-1">

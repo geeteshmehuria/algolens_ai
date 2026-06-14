@@ -1,8 +1,8 @@
 # app/routers/attempts.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List, Literal, Optional
 
 from app.database import get_session
 from app.models import ProblemAttempt, DSAProblem
@@ -11,14 +11,16 @@ from app.services.progress_service import schedule_revision
 
 router = APIRouter(prefix="/problems", tags=["Attempts"])
 
+MAX_CODE_CHARS = 20_000
+
 
 # --- Pydantic Schemas ---
 class AttemptCreate(BaseModel):
-    submitted_code: str
-    status: str  # 'Correct', 'Incorrect', 'Reviewing'
+    submitted_code: str = Field(max_length=MAX_CODE_CHARS)
+    status: Literal["Correct", "Incorrect", "Reviewing"]
     used_hint: bool = False
-    time_complexity: Optional[str] = None
-    space_complexity: Optional[str] = None
+    time_complexity: Optional[str] = Field(default=None, max_length=50)
+    space_complexity: Optional[str] = Field(default=None, max_length=50)
 
 
 # --- Endpoints ---

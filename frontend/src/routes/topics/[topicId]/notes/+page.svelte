@@ -52,6 +52,7 @@
 	let topicsList = $state<TopicItem[]>([]);
 	let noteDetails = $state<NoteDetails | null>(null);
 	let userState = $state<any>(null);
+	let isAdmin = $state(false);
 
 	let loading = $state(true);
 	let generating = $state(false);
@@ -59,20 +60,39 @@
 	let error = $state('');
 
 	let isSidebarOpen = $state(false); // Mobile sidebar drawer state
+	let rightColumn = $state<HTMLDivElement | null>(null); // for scroll reset on topic change
 
-	onMount(async () => {
+	// Monotonic token: a note load only commits its result if it is still the
+	// most recent one. This prevents a slower/duplicate request from resetting
+	// loading/content after a newer load already finished (the root cause of the
+	// "stuck on Opening study folder…" state).
+	let loadSeq = 0;
+
+	onMount(() => {
 		if (!localStorage.getItem('token')) {
 			goto('/login');
 			return;
 		}
-		await Promise.all([loadTopicsSummary(), loadNoteData()]);
+		// Topics list and roles load independently — neither blocks the notes.
+		loadTopicsSummary();
+		loadRoles();
 	});
 
-	// Reactively reload note data when topicId changes
+	// Single source of truth for note loading. Keyed on topicId so it fires
+	// identically on direct URL load, hard refresh, back/forward, and in-app
+	// topic switches — no dependency on prior in-app navigation.
 	$effect(() => {
-		if (topicId) {
-			loadNoteData();
-		}
+		const id = topicId;
+		if (!id) return;
+		if (typeof localStorage !== 'undefined' && !localStorage.getItem('token')) return;
+		loadNoteData(id);
+	});
+
+	// Whenever the topic changes, send the right sidebar back to the top so it
+	// starts at "Table of Contents" rather than wherever it was last scrolled.
+	$effect(() => {
+		topicId; // track
+		if (rightColumn) rightColumn.scrollTop = 0;
 	});
 
 	async function loadTopicsSummary() {
@@ -83,13 +103,24 @@
 		}
 	}
 
-	async function loadNoteData() {
+	async function loadRoles() {
+		try {
+			const me = await api<{ roles: string[] }>('/auth/me');
+			isAdmin = me.roles?.includes('admin') ?? false;
+		} catch {
+			isAdmin = false;
+		}
+	}
+
+	async function loadNoteData(id: number) {
+		const seq = ++loadSeq;
 		loading = true;
 		error = '';
 		noteDetails = null;
 		canGenerate = false;
 		try {
-			const res = await api<any>(`/topics/${topicId}/notes`);
+			const res = await api<any>(`/topics/${id}/notes`);
+			if (seq !== loadSeq) return; // a newer load superseded this one
 			if (res.can_generate) {
 				canGenerate = true;
 			} else {
@@ -97,9 +128,10 @@
 				userState = res.state;
 			}
 		} catch (e: any) {
+			if (seq !== loadSeq) return;
 			error = e.message || 'Failed to fetch study notes.';
 		} finally {
-			loading = false;
+			if (seq === loadSeq) loading = false;
 		}
 	}
 
@@ -108,7 +140,7 @@
 		error = '';
 		try {
 			await api(`/topics/${topicId}/notes/generate`, { method: 'POST' });
-			await Promise.all([loadTopicsSummary(), loadNoteData()]);
+			await Promise.all([loadTopicsSummary(), loadNoteData(topicId)]);
 		} catch (e: any) {
 			error = e.message || 'Failed to generate study notes.';
 		} finally {
@@ -229,6 +261,14 @@
 	<div class="flex-1 flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
 		<!-- Middle: Content Area (Scrolls) -->
 		<div class="flex-1 flex flex-col h-full overflow-y-auto bg-slate-50/20 border border-slate-200/50 rounded-2xl p-6 gap-6 relative">
+			<!-- Admin-only compact draft notice (does not interrupt the note body) -->
+			{#if isAdmin && noteDetails?.is_preview}
+				<div class="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-[10px] font-semibold text-amber-800">
+					<span class="flex items-center gap-1.5"><span>⚠️</span> Draft preview — visible to admins only until published.</span>
+					<a href="/admin/topic-notes" class="text-amber-700 hover:text-amber-900 underline shrink-0">Review queue →</a>
+				</div>
+			{/if}
+
 			<!-- Header Action bar -->
 			<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
 				<div class="flex flex-col gap-1">
@@ -240,9 +280,9 @@
 							☰ Topics
 						</button>
 
-						<h2 class="text-base font-extrabold text-slate-900">
+						<h1 class="text-lg font-extrabold text-slate-900">
 							{currentTopicItem?.name || 'Study Notes'}
-						</h2>
+						</h1>
 					</div>
 					{#if noteDetails}
 						<span class="text-[10px] text-slate-400 font-semibold">
@@ -251,36 +291,36 @@
 					{/if}
 				</div>
 
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-3">
 					{#if noteDetails}
 						<button
 							onclick={toggleBookmark}
-							class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs py-1.5 px-3 rounded-xl shadow-sm font-semibold flex items-center gap-1.5 transition-colors"
+							aria-pressed={userState?.is_bookmarked || false}
+							class="text-xs py-1.5 px-3 rounded-xl border font-semibold flex items-center gap-1.5 transition-colors {userState?.is_bookmarked ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}"
 						>
 							<span>{userState?.is_bookmarked ? '★ Bookmarked' : '☆ Bookmark'}</span>
 						</button>
+
+						<!-- Divider separating the bookmark action from the view tabs -->
+						<div class="hidden md:block w-px h-6 bg-slate-200"></div>
 					{/if}
 
-					<!-- View Mode Toggles -->
-					<div class="flex bg-slate-100 p-1 rounded-xl border">
-						<button
-							onclick={() => setView('notes')}
-							class="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all {activeView === 'notes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"
-						>
-							Learn Notes
-						</button>
-						<button
-							onclick={() => setView('revision')}
-							class="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all {activeView === 'revision' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"
-						>
-							Revision
-						</button>
-						<button
-							onclick={() => setView('quiz')}
-							class="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all {activeView === 'quiz' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"
-						>
-							Quiz
-						</button>
+					<!-- View Mode Tabs -->
+					<div role="tablist" class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-0.5">
+						{#each [
+							{ id: 'notes', label: 'Learn Notes' },
+							{ id: 'revision', label: 'Revision' },
+							{ id: 'quiz', label: 'Quiz' }
+						] as tab}
+							<button
+								role="tab"
+								aria-selected={activeView === tab.id}
+								onclick={() => setView(tab.id as 'notes' | 'revision' | 'quiz')}
+								class="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all {activeView === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'}"
+							>
+								{tab.label}
+							</button>
+						{/each}
 					</div>
 				</div>
 			</div>
@@ -314,13 +354,6 @@
 			{:else if noteDetails}
 				{#if activeView === 'notes'}
 					<!-- 1. Notes View Mode -->
-					{#if noteDetails.is_preview}
-						<div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-[11px] font-semibold text-amber-800 flex items-center justify-between gap-3 leading-relaxed shadow-sm">
-							<span>⚠️ Viewing Draft Version. Rendered live for admin review. Click publish to make visible for all users.</span>
-							<Button class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] h-7 px-3 font-semibold shrink-0" href="/admin/topic-notes">Review Queue</Button>
-						</div>
-					{/if}
-
 					<div class="flex flex-col gap-6">
 						{#each noteDetails.content.sections as section}
 							{#if section.section_key !== 'revision_notes'}
@@ -382,7 +415,7 @@
 
 		<!-- Right Side: TOC + Checklist (Desktop only - hidden in quiz/revision) -->
 		{#if noteDetails && activeView === 'notes'}
-			<div class="hidden lg:flex flex-col gap-6 w-80 shrink-0 h-full overflow-y-auto pr-1">
+			<div bind:this={rightColumn} class="hidden lg:flex flex-col gap-6 w-80 shrink-0 h-full overflow-y-auto pr-1">
 				<TocPanel
 					sections={noteDetails.content.sections.filter(s => s.section_key !== 'revision_notes')}
 					completedSections={userState?.completed_sections || []}

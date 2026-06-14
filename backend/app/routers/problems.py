@@ -1,5 +1,5 @@
 # app/routers/problems.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, select
 from pydantic import BaseModel
 from typing import List, Optional
@@ -10,6 +10,11 @@ from app.models import DSAProblem
 from app.routers.auth import require_admin, User
 
 router = APIRouter(prefix="/problems", tags=["Problems"])
+
+# Caps the worst-case response so an unauthenticated catalog read can never pull
+# the entire table in one request.
+DEFAULT_PAGE_SIZE = 100
+MAX_PAGE_SIZE = 200
 
 
 # --- Pydantic Schemas ---
@@ -37,9 +42,14 @@ def get_problems(
     topic_id: Optional[int] = None,
     pattern_id: Optional[int] = None,
     difficulty: Optional[str] = None,
+    limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    offset: int = Query(0, ge=0),
     session: Session = Depends(get_session),
 ):
-    """Retrieve list of DSA problems, with optional filters"""
+    """Retrieve list of DSA problems, with optional filters and pagination.
+
+    Results are ordered by id and bounded by `limit` (max 200) so a single
+    request can never stream the whole table."""
     statement = select(DSAProblem).where(DSAProblem.is_active == True)  # noqa: E712
     if topic_id:
         statement = statement.where(DSAProblem.topic_id == topic_id)
@@ -48,6 +58,7 @@ def get_problems(
     if difficulty:
         statement = statement.where(DSAProblem.difficulty == difficulty)
 
+    statement = statement.order_by(DSAProblem.id).offset(offset).limit(limit)
     return session.exec(statement).all()
 
 

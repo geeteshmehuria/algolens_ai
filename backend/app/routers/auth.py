@@ -6,7 +6,7 @@ import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -14,6 +14,7 @@ from app.config import settings
 from app.database import get_session
 from app.models import User, Role, UserRole, PasswordResetToken
 from app.services.email_service import send_password_reset_email
+from app.services.rate_limit import RateLimiter
 from app.utils import (
     hash_password,
     verify_password,
@@ -22,6 +23,13 @@ from app.utils import (
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+# Per-IP abuse limits. Login/reset are the brute-force surfaces; forgot-password
+# also has a per-user 60s throttle, this caps a single IP hammering many emails.
+login_limiter = RateLimiter("auth_login", limit=10, window_seconds=60)
+register_limiter = RateLimiter("auth_register", limit=10, window_seconds=60)
+forgot_password_limiter = RateLimiter("auth_forgot", limit=5, window_seconds=60)
+reset_password_limiter = RateLimiter("auth_reset", limit=10, window_seconds=60)
 
 security = HTTPBearer()
 
@@ -46,7 +54,7 @@ def _validate_password_bytes(password: str) -> str:
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
-    full_name: str
+    full_name: str = Field(min_length=1, max_length=150)
 
     _check_password = field_validator("password")(_validate_password_bytes)
 
@@ -152,7 +160,10 @@ def require_admin(
 
 # --- Endpoints ---
 @router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(register_limiter)],
 )
 def register(user_data: UserRegister, session: Session = Depends(get_session)):
     """Register a new user"""
@@ -178,7 +189,7 @@ def register(user_data: UserRegister, session: Session = Depends(get_session)):
     return new_user
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, dependencies=[Depends(login_limiter)])
 def login(credentials: UserLogin, session: Session = Depends(get_session)):
     """Authenticate user and return JWT access token"""
     statement = select(User).where(User.email == normalize_email(credentials.email))
@@ -200,7 +211,7 @@ GENERIC_RESET_MESSAGE = (
 )
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(forgot_password_limiter)])
 def forgot_password(
     payload: ForgotPasswordRequest,
     request: Request,
@@ -261,7 +272,7 @@ def forgot_password(
     return {"message": GENERIC_RESET_MESSAGE}
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", dependencies=[Depends(reset_password_limiter)])
 def reset_password(
     payload: ResetPasswordRequest, session: Session = Depends(get_session)
 ):

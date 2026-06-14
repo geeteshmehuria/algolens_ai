@@ -32,15 +32,34 @@ def _clear_stale_tls_env() -> None:
 
 _clear_stale_tls_env()
 
+# The built-in development JWT secret. It is intentionally well-known, so it
+# must never sign tokens in production — _validate_production_config() blocks
+# startup if it (or an empty value) survives into a non-development env.
+DEFAULT_JWT_SECRET = "supersecretjwtkeyforalgolensai1234567890!@#"
+
+# Environment names treated as "local / not production" — these relax the
+# config guard and keep the localhost CORS origins.
+_NON_PROD_ENVS = {"development", "dev", "local", "test", "testing"}
+
 
 class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/algolens_db"
 
     # Security
-    JWT_SECRET: str = "supersecretjwtkeyforalgolensai1234567890!@#"
+    JWT_SECRET: str = DEFAULT_JWT_SECRET
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
+
+    # Abuse protection. In-process sliding-window rate limiting (see
+    # app/services/rate_limit.py) guards auth and AI endpoints. Disable only
+    # for special test scenarios; production should keep it on.
+    RATE_LIMIT_ENABLED: bool = True
+
+    # Comma-separated additional CORS origins (e.g. the deployed frontend).
+    # FRONTEND_URL is always allowed; localhost origins are added only in
+    # non-production environments.
+    CORS_ORIGINS: str = ""
 
     # Password reset
     FRONTEND_URL: str = "http://localhost:5173"
@@ -78,5 +97,68 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.strip().lower() not in _NON_PROD_ENVS
+
+    def allowed_cors_origins(self) -> list[str]:
+        """Origins allowed by CORS. The deployed frontend (FRONTEND_URL) and
+        any CORS_ORIGINS entries are always included; localhost dev origins are
+        added only outside production."""
+        origins: list[str] = []
+        if self.FRONTEND_URL:
+            origins.append(self.FRONTEND_URL.rstrip("/"))
+        origins.extend(
+            o.strip().rstrip("/") for o in self.CORS_ORIGINS.split(",") if o.strip()
+        )
+        if not self.is_production:
+            origins.extend(
+                [
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5173",
+                    "http://localhost:5174",
+                    "http://127.0.0.1:5174",
+                ]
+            )
+        # De-duplicate while preserving order.
+        seen: set[str] = set()
+        return [o for o in origins if not (o in seen or seen.add(o))]
+
+
+def _validate_production_config(s: "Settings") -> None:
+    """Fail fast on insecure production configuration.
+
+    In local/dev environments we only warn; in production a weak JWT secret or
+    a missing frontend origin aborts startup so the app never serves traffic in
+    a forgeable-token state.
+    """
+    if not s.is_production:
+        if s.JWT_SECRET == DEFAULT_JWT_SECRET:
+            logger.warning(
+                "Using the built-in default JWT_SECRET — acceptable for local "
+                "development only. Set a strong unique JWT_SECRET before deploying."
+            )
+        return
+
+    errors: list[str] = []
+    if not s.JWT_SECRET or s.JWT_SECRET == DEFAULT_JWT_SECRET:
+        errors.append(
+            "JWT_SECRET must be set to a strong, unique value (not the built-in "
+            "default) when ENVIRONMENT is not 'development'."
+        )
+    elif len(s.JWT_SECRET) < 32:
+        errors.append("JWT_SECRET should be at least 32 characters long.")
+    if not s.allowed_cors_origins():
+        errors.append(
+            "Set FRONTEND_URL (and/or CORS_ORIGINS) to your production frontend "
+            "origin so CORS is not left empty."
+        )
+    if errors:
+        raise RuntimeError(
+            "Refusing to start with insecure production configuration:\n  - "
+            + "\n  - ".join(errors)
+        )
+
 
 settings = Settings()
+_validate_production_config(settings)

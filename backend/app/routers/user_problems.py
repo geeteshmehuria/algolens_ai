@@ -17,7 +17,7 @@ router = APIRouter(tags=["User Problem State"])
 
 # --- Pydantic Schemas ---
 class NoteUpdate(BaseModel):
-    content: str
+    content: str = PydanticField(max_length=20_000)
 
 
 class ConfidenceUpdate(BaseModel):
@@ -169,16 +169,21 @@ def list_bookmarks(
         .where(UserBookmark.user_id == current_user.id)
         .order_by(UserBookmark.created_on.desc())
     ).all()
-    result = []
-    for bookmark, problem in rows:
-        topic = session.get(DSATopic, problem.topic_id)
-        result.append(
-            {
-                "id": problem.id,
-                "title": problem.title,
-                "difficulty": problem.difficulty,
-                "topic": topic.name if topic else "General",
-                "bookmarked_on": bookmark.created_on,
-            }
-        )
-    return result
+
+    # Resolve topic names in a single query instead of one SELECT per bookmark.
+    topic_ids = {problem.topic_id for _, problem in rows}
+    topic_names: dict[int, str] = {}
+    if topic_ids:
+        topics = session.exec(select(DSATopic).where(DSATopic.id.in_(topic_ids))).all()
+        topic_names = {t.id: t.name for t in topics}
+
+    return [
+        {
+            "id": problem.id,
+            "title": problem.title,
+            "difficulty": problem.difficulty,
+            "topic": topic_names.get(problem.topic_id, "General"),
+            "bookmarked_on": bookmark.created_on,
+        }
+        for bookmark, problem in rows
+    ]

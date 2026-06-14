@@ -1,4 +1,6 @@
 # app/routers/roadmap.py
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from typing import List
@@ -9,8 +11,27 @@ from app.routers.auth import get_current_user, User
 from app.services import ai_service
 from app.services.ai_service import AIUnavailableError, AIGenerationError
 from app.services.progress_service import compute_topic_proficiency
+from app.services.rate_limit import RateLimiter
 
 router = APIRouter(prefix="/roadmap", tags=["Roadmap"])
+
+logger = logging.getLogger(__name__)
+
+# Roadmap generation is a Gemini call — throttle per IP like the other AI routes.
+roadmap_limiter = RateLimiter("ai_roadmap", limit=10, window_seconds=60)
+
+
+def _ai_error(exc: Exception) -> HTTPException:
+    """Map AI failures to honest HTTP errors without leaking provider detail."""
+    if isinstance(exc, AIUnavailableError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        )
+    logger.error("Roadmap AI generation failed: %s", exc, exc_info=True)
+    return HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail="AI response could not be generated right now. Please try again.",
+    )
 
 
 @router.get("", response_model=List[LearningRoadmap])
@@ -29,7 +50,10 @@ def get_roadmaps(
 
 
 @router.post(
-    "/generate", response_model=LearningRoadmap, status_code=status.HTTP_201_CREATED
+    "/generate",
+    response_model=LearningRoadmap,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(roadmap_limiter)],
 )
 def generate_roadmap(
     session: Session = Depends(get_session),
@@ -53,17 +77,18 @@ def generate_roadmap(
     problems = session.exec(
         select(DSAProblem).where(DSAProblem.is_active == True)  # noqa: E712
     ).all()
+    # Resolve all topic names in one query rather than per-problem.
+    topic_names = {t.id: t.name for t in session.exec(select(DSATopic)).all()}
     candidates = []
     for p in problems:
         if p.id in solved_ids:
             continue
-        topic = session.get(DSATopic, p.topic_id)
         candidates.append(
             {
                 "id": p.id,
                 "title": p.title,
                 "difficulty": p.difficulty,
-                "topic": topic.name if topic else "General",
+                "topic": topic_names.get(p.topic_id, "General"),
             }
         )
 
@@ -84,12 +109,8 @@ def generate_roadmap(
             ],
             candidate_problems=candidates,
         )
-    except AIUnavailableError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
-        )
-    except AIGenerationError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    except (AIUnavailableError, AIGenerationError) as exc:
+        raise _ai_error(exc)
 
     new_roadmap = LearningRoadmap(
         user_id=current_user.id,

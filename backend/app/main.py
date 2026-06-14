@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import settings
 
 # Import routers
 from app.routers import (
@@ -25,19 +26,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Configure CORS
-# In production, this should only allow the frontend URL.
-# In development, it allows localhost:5173 (SvelteKit default dev server).
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-]
-
+# Configure CORS from settings: FRONTEND_URL + CORS_ORIGINS always; localhost
+# dev origins are added only outside production (see Settings.allowed_cors_origins).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.allowed_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

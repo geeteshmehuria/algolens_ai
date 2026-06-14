@@ -4,6 +4,16 @@ from sqlalchemy.pool import StaticPool
 
 from app import models  # noqa: F401 — register all tables
 from app.models import User, DSATopic, DSAPattern, DSAProblem
+from app.services import rate_limit
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Per-process rate-limit windows persist across requests; clear them
+    between tests so one test's traffic never trips another's limit."""
+    rate_limit.reset_all()
+    yield
+    rate_limit.reset_all()
 
 
 @pytest.fixture

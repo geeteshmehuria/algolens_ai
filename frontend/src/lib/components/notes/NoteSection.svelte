@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { renderMarkdown } from '$lib/markdown';
+
 	interface SectionData {
 		section_key: string;
 		title: string;
@@ -20,38 +22,9 @@
 
 	let isOpen = $state(true);
 
-	// Simple markdown parser helper
-	function parseMarkdown(md: string): string {
-		if (!md) return '';
-
-		// Escape HTML tags slightly
-		let html = md
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;');
-
-		// Code blocks: ```language\ncode\n```
-		html = html.replace(/```(?:[a-zA-Z0-9]+)?\n([\s\S]*?)\n```/g, '<pre class="bg-slate-900 text-slate-100 p-4 rounded-xl font-mono text-[12px] my-3 overflow-x-auto whitespace-pre">$1</pre>');
-
-		// Inline code: `code`
-		html = html.replace(/`([^`]+)`/g, '<code class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[11px] font-bold border border-slate-200/50">$1</code>');
-
-		// Bold: **text**
-		html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-		// Lists: - item
-		html = html.replace(/^-\s+(.+)$/gm, '<li class="ml-4 list-disc pl-1 py-0.5 text-slate-600">$1</li>');
-
-		// Wrap lists in ul
-		html = html.replace(/((?:<li class="ml-4 list-disc pl-1 py-0.5 text-slate-600">.+<\/li>\n?)+)/g, '<ul class="my-3 flex flex-col gap-0.5">$1</ul>');
-
-		// Line breaks
-		html = html.replace(/\n\n/g, '</p><p class="my-3 text-slate-600 leading-relaxed text-xs">');
-
-		return `<p class="text-slate-600 leading-relaxed text-xs">${html}</p>`;
-	}
-
-	let parsedContent = $derived(parseMarkdown(section.content_md));
+	// All note body content flows through the one shared, XSS-safe renderer
+	// (headings, lists, bold/italic, code, and GFM tables).
+	let parsedContent = $derived(renderMarkdown(section.content_md));
 </script>
 
 <div class="border border-slate-200 bg-white rounded-2xl overflow-hidden transition-all duration-200 shadow-sm {completed ? 'border-emerald-100 bg-emerald-50/5' : ''}">
@@ -71,9 +44,9 @@
 					type="checkbox"
 					checked={completed}
 					onchange={(e) => onToggleComplete(e.currentTarget.checked)}
-					class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+					class="w-4 h-4 shrink-0 rounded border-slate-300 accent-blue-600 focus:ring-2 focus:ring-blue-500/40 cursor-pointer"
 				/>
-				<span>Mark Read</span>
+				<span class="leading-none">Mark Read</span>
 			</label>
 		</div>
 	</div>
