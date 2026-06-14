@@ -1,18 +1,15 @@
 # app/routers/dashboard.py
-from datetime import date
-
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, select, func
+from sqlmodel import Session
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
 from app.database import get_session
-from app.models import ProblemAttempt, RevisionQueue
 from app.routers.auth import get_current_user, User
 from app.services.progress_service import (
-    calculate_streak,
     compute_topic_proficiency,
     daily_activity,
+    learning_summary,
     recommend_problems,
 )
 
@@ -40,38 +37,8 @@ def get_dashboard_summary(
 ):
     """Summary statistics for the user dashboard — all computed from real
     attempts, never placeholder data."""
-    attempted_count = (
-        session.exec(
-            select(func.count(func.distinct(ProblemAttempt.problem_id))).where(
-                ProblemAttempt.user_id == current_user.id
-            )
-        ).one()
-        or 0
-    )
-
-    solved_count = (
-        session.exec(
-            select(func.count(func.distinct(ProblemAttempt.problem_id))).where(
-                ProblemAttempt.user_id == current_user.id,
-                ProblemAttempt.status == "Correct",
-            )
-        ).one()
-        or 0
-    )
-
-    # Only revisions actually due (today or overdue), not everything pending.
-    revision_due_count = (
-        session.exec(
-            select(func.count(RevisionQueue.id)).where(
-                RevisionQueue.user_id == current_user.id,
-                RevisionQueue.status == "pending",
-                RevisionQueue.due_date <= date.today(),
-            )
-        ).one()
-        or 0
-    )
-
-    streak = calculate_streak(session, current_user.id)
+    # Core counters come from the shared helper (also used by /common/contents).
+    summary = learning_summary(session, current_user.id)
 
     # Weakest 3 topics the user has actually attempted. topic_id lets the
     # dashboard deep-link each row to the filtered problems list.
@@ -83,10 +50,10 @@ def get_dashboard_summary(
     recommended_problems = recommend_problems(session, current_user.id, limit=3)
 
     return DashboardSummary(
-        solved_count=solved_count,
-        attempted_count=attempted_count,
-        streak=streak,
-        revision_due_count=revision_due_count,
+        solved_count=summary["solved_count"],
+        attempted_count=summary["attempted_count"],
+        streak=summary["streak"],
+        revision_due_count=summary["revision_due_count"],
         weak_topics=weak_topics,
         recommended_problems=recommended_problems,
     )

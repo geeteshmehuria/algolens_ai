@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api } from '$lib/api';
+	import { loadMasterData } from '$lib/stores/common';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
@@ -41,10 +42,14 @@
 		}
 
 		try {
-			[problems, topics] = await Promise.all([
+			// Topics come from the cached master-data store (shared across pages),
+			// so navigating back here doesn't refetch the dropdown list.
+			const [probs, master] = await Promise.all([
 				api<Problem[]>('/problems'),
-				api<Topic[]>('/topics')
+				loadMasterData(['topics'])
 			]);
+			problems = probs;
+			topics = (master.topics ?? []) as Topic[];
 
 			applyFilters();
 		} catch (e) {

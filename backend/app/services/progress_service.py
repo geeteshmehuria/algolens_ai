@@ -84,6 +84,44 @@ def calculate_streak(session: Session, user_id: int) -> int:
     return streak
 
 
+def learning_summary(session: Session, user_id: int) -> dict:
+    """Core progress counters shared by the dashboard summary and the common
+    contents API (single source of truth so the two never drift)."""
+    attempted_count = (
+        session.exec(
+            select(func.count(func.distinct(ProblemAttempt.problem_id))).where(
+                ProblemAttempt.user_id == user_id
+            )
+        ).one()
+        or 0
+    )
+    solved_count = (
+        session.exec(
+            select(func.count(func.distinct(ProblemAttempt.problem_id))).where(
+                ProblemAttempt.user_id == user_id,
+                ProblemAttempt.status == "Correct",
+            )
+        ).one()
+        or 0
+    )
+    revision_due_count = (
+        session.exec(
+            select(func.count(RevisionQueue.id)).where(
+                RevisionQueue.user_id == user_id,
+                RevisionQueue.status == "pending",
+                RevisionQueue.due_date <= date.today(),
+            )
+        ).one()
+        or 0
+    )
+    return {
+        "solved_count": solved_count,
+        "attempted_count": attempted_count,
+        "streak": calculate_streak(session, user_id),
+        "revision_due_count": revision_due_count,
+    }
+
+
 def daily_activity(session: Session, user_id: int, days: int = 84) -> List[dict]:
     """Per-day attempt counts for the last ``days`` days, for a contribution heatmap.
 

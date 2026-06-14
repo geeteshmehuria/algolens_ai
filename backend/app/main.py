@@ -18,6 +18,7 @@ from app.routers import (
     user_problems,
     topic_notes,
 )
+from app.common import routes as common_routes
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ app.include_router(dashboard.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(user_problems.router, prefix="/api")
 app.include_router(topic_notes.router, prefix="/api")
+app.include_router(common_routes.router, prefix="/api")
 
 
 @app.get("/")

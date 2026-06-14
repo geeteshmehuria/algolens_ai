@@ -5,7 +5,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
-	import { api } from '$lib/api';
+	import { loadContents, clearCommonCache } from '$lib/stores/common';
 
 	let { children } = $props();
 
@@ -44,6 +44,7 @@
 	function logout() {
 		localStorage.removeItem('token');
 		localStorage.removeItem('user');
+		clearCommonCache();
 		isAuthenticated = false;
 		user = null;
 		goto('/login');
@@ -64,20 +65,17 @@
 					localStorage.removeItem('user');
 				}
 			}
-			// Fetch streak + revision-due count if not loaded yet (one summary call
-			// already made app-wide; reused here for the sidebar badge).
-			if (streak === null) {
-				api<{ streak: number; revision_due_count: number }>('/dashboard/summary')
-					.then((summary) => {
-						streak = summary.streak;
-						revisionDue = summary.revision_due_count ?? 0;
-					})
-					.catch(() => (streak = null));
-			}
-			// Load roles once to decide which admin-only nav items to show.
+			// One bootstrap call (`/common/contents`, cached) replaces the separate
+			// /auth/me + /dashboard/summary calls the shell used to make — it carries
+			// roles (for admin nav) plus the streak / revision-due counts.
 			if (roles === null) {
-				api<{ roles: string[] }>('/auth/me')
-					.then((me) => (roles = me.roles ?? []))
+				loadContents()
+					.then((c) => {
+						roles = c.user.roles ?? [];
+						streak = c.learning_summary.streak;
+						revisionDue = c.learning_summary.revision_due_count ?? 0;
+						if (!user) user = { full_name: c.user.name ?? undefined, email: c.user.email };
+					})
 					.catch(() => (roles = []));
 			}
 		} else {
