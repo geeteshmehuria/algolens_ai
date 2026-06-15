@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
-	import { getToken } from '$lib/auth';
-	import { loadContents } from '$lib/stores/common';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import LoadingState from '$lib/components/app/LoadingState.svelte';
+	import { onMount } from "svelte";
+	import { page } from "$app/state";
+	import { goto } from "$app/navigation";
+	import { api } from "$lib/api";
+	import { getToken } from "$lib/auth";
+	import { loadContents } from "$lib/stores/common";
+	import { Card, CardContent } from "$lib/components/ui/card";
+	import { Button } from "$lib/components/ui/button";
+	import LoadingState from "$lib/components/app/LoadingState.svelte";
 
 	// Components
-	import NotesSidebar from '$lib/components/notes/NotesSidebar.svelte';
-	import NoteSection from '$lib/components/notes/NoteSection.svelte';
-	import CodeTemplate from '$lib/components/notes/CodeTemplate.svelte';
-	import ComplexityTable from '$lib/components/notes/ComplexityTable.svelte';
-	import TocPanel from '$lib/components/notes/TocPanel.svelte';
-	import ChecklistPanel from '$lib/components/notes/ChecklistPanel.svelte';
-	import QuizRunner from '$lib/components/notes/QuizRunner.svelte';
-	import GenerationProgress from '$lib/components/notes/GenerationProgress.svelte';
-	import RevisionView from '$lib/components/notes/RevisionView.svelte';
+	import NotesSidebar from "$lib/components/notes/NotesSidebar.svelte";
+	import NoteSection from "$lib/components/notes/NoteSection.svelte";
+	import CodeTemplate from "$lib/components/notes/CodeTemplate.svelte";
+	import ComplexityTable from "$lib/components/notes/ComplexityTable.svelte";
+	import TocPanel from "$lib/components/notes/TocPanel.svelte";
+	import ChecklistPanel from "$lib/components/notes/ChecklistPanel.svelte";
+	import QuizRunner from "$lib/components/notes/QuizRunner.svelte";
+	import GenerationProgress from "$lib/components/notes/GenerationProgress.svelte";
+	import RevisionView from "$lib/components/notes/RevisionView.svelte";
 
 	interface TopicItem {
 		id: number;
@@ -48,8 +48,8 @@
 		is_preview?: boolean;
 	}
 
-	const topicId = $derived(parseInt(page.params.topicId || '0'));
-	const activeView = $derived(page.url.searchParams.get('view') || 'notes');
+	const topicId = $derived(parseInt(page.params.topicId || "0"));
+	const activeView = $derived(page.url.searchParams.get("view") || "notes");
 
 	// Page State
 	let topicsList = $state<TopicItem[]>([]);
@@ -60,7 +60,7 @@
 	let loading = $state(true);
 	let generating = $state(false);
 	let canGenerate = $state(false);
-	let error = $state('');
+	let error = $state("");
 
 	let isSidebarOpen = $state(false); // Mobile sidebar drawer state
 	let rightColumn = $state<HTMLDivElement | null>(null); // for scroll reset on topic change
@@ -73,7 +73,7 @@
 
 	onMount(() => {
 		if (!getToken()) {
-			goto('/login');
+			goto("/login");
 			return;
 		}
 		// Topics list and roles load independently — neither blocks the notes.
@@ -100,9 +100,9 @@
 
 	async function loadTopicsSummary() {
 		try {
-			topicsList = await api<TopicItem[]>('/me/topic-notes');
+			topicsList = await api<TopicItem[]>("/me/topic-notes");
 		} catch (e) {
-			console.error('Failed to load topics summary', e);
+			console.error("Failed to load topics summary", e);
 		}
 	}
 
@@ -111,7 +111,7 @@
 			// Roles come from the cached /common/contents bootstrap the layout already
 			// fetched — avoids a duplicate /auth/me call on every notes-page visit.
 			const c = await loadContents();
-			isAdmin = c.user.roles?.includes('admin') ?? false;
+			isAdmin = c.user.roles?.includes("admin") ?? false;
 		} catch {
 			isAdmin = false;
 		}
@@ -119,17 +119,20 @@
 
 	// Patch the cached sidebar entry for the current topic in place instead of
 	// refetching the whole /me/topic-notes list after every small mutation.
-	function patchLocalTopic(opts: { state?: Record<string, any>; lastQuiz?: any }) {
+	function patchLocalTopic(opts: {
+		state?: Record<string, any>;
+		lastQuiz?: any;
+	}) {
 		const idx = topicsList.findIndex((t) => t.id === topicId);
 		if (idx === -1) return;
 		const t = topicsList[idx];
 		const next = { ...t };
 		if (opts.state) {
 			const base = t.state ?? {
-				status: 'reading',
+				status: "reading",
 				is_bookmarked: false,
 				completed_sections_count: 0,
-				last_read_on: null
+				last_read_on: null,
 			};
 			next.state = { ...base, ...opts.state };
 		}
@@ -140,7 +143,7 @@
 	async function loadNoteData(id: number) {
 		const seq = ++loadSeq;
 		loading = true;
-		error = '';
+		error = "";
 		noteDetails = null;
 		canGenerate = false;
 		try {
@@ -154,7 +157,7 @@
 			}
 		} catch (e: any) {
 			if (seq !== loadSeq) return;
-			error = e.message || 'Failed to fetch study notes.';
+			error = e.message || "Failed to fetch study notes.";
 		} finally {
 			if (seq === loadSeq) loading = false;
 		}
@@ -162,12 +165,12 @@
 
 	async function handleGenerateNotes() {
 		generating = true;
-		error = '';
+		error = "";
 		try {
-			await api(`/topics/${topicId}/notes/generate`, { method: 'POST' });
+			await api(`/topics/${topicId}/notes/generate`, { method: "POST" });
 			await Promise.all([loadTopicsSummary(), loadNoteData(topicId)]);
 		} catch (e: any) {
-			error = e.message || 'Failed to generate study notes.';
+			error = e.message || "Failed to generate study notes.";
 		} finally {
 			generating = false;
 		}
@@ -177,11 +180,14 @@
 	async function toggleBookmark() {
 		if (!userState) return;
 		try {
-			const res = await api<{ is_bookmarked: boolean }>(`/topics/${topicId}/notes/bookmark`, { method: 'POST' });
+			const res = await api<{ is_bookmarked: boolean }>(
+				`/topics/${topicId}/notes/bookmark`,
+				{ method: "POST" },
+			);
 			userState.is_bookmarked = res.is_bookmarked;
 			patchLocalTopic({ state: { is_bookmarked: res.is_bookmarked } });
 		} catch (e) {
-			console.error('Bookmark toggle failed', e);
+			console.error("Bookmark toggle failed", e);
 		}
 	}
 
@@ -189,13 +195,17 @@
 		if (!userState) return;
 		try {
 			const res = await api<any>(`/topics/${topicId}/notes/progress`, {
-				method: 'PUT',
-				body: JSON.stringify({ section_key: key, completed })
+				method: "PUT",
+				body: JSON.stringify({ section_key: key, completed }),
 			});
 			userState.completed_sections = res.completed_sections;
-			patchLocalTopic({ state: { completed_sections_count: res.completed_sections.length } });
+			patchLocalTopic({
+				state: {
+					completed_sections_count: res.completed_sections.length,
+				},
+			});
 		} catch (e) {
-			console.error('Failed to update progress', e);
+			console.error("Failed to update progress", e);
 		}
 	}
 
@@ -203,12 +213,12 @@
 		if (!userState) return;
 		try {
 			const res = await api<any>(`/topics/${topicId}/notes/checklist`, {
-				method: 'PUT',
-				body: JSON.stringify({ key, checked })
+				method: "PUT",
+				body: JSON.stringify({ key, checked }),
 			});
 			userState.checklist_state = res.checklist_state;
 		} catch (e) {
-			console.error('Failed to update checklist', e);
+			console.error("Failed to update checklist", e);
 		}
 	}
 
@@ -216,14 +226,14 @@
 		if (!userState) return;
 		try {
 			const res = await api<any>(`/topics/${topicId}/notes/progress`, {
-				method: 'PUT',
-				body: JSON.stringify({ status: 'completed' })
+				method: "PUT",
+				body: JSON.stringify({ status: "completed" }),
 			});
 			userState.status = res.status;
 			patchLocalTopic({ state: { status: res.status } });
-			alert('Topic marked as Completed! Great job! 🎉');
+			alert("Topic marked as Completed! Great job! 🎉");
 		} catch (e) {
-			console.error('Failed to complete topic', e);
+			console.error("Failed to complete topic", e);
 		}
 	}
 
@@ -232,7 +242,7 @@
 		goto(`/topics/${id}/notes?view=${activeView}`);
 	}
 
-	function setView(view: 'notes' | 'revision' | 'quiz') {
+	function setView(view: "notes" | "revision" | "quiz") {
 		goto(`/topics/${topicId}/notes?view=${view}`);
 	}
 
@@ -240,15 +250,17 @@
 	function scrollToSection(key: string) {
 		const el = document.getElementById(`section-${key}`);
 		if (el) {
-			el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			el.scrollIntoView({ behavior: "smooth", block: "start" });
 		}
 	}
 
 	// Derive current topic item
-	let currentTopicItem = $derived(topicsList.find(t => t.id === topicId));
+	let currentTopicItem = $derived(topicsList.find((t) => t.id === topicId));
 </script>
 
-<div class="flex h-[calc(100vh-theme(spacing.16)-4rem)] gap-6 w-full max-w-[1500px] mx-auto overflow-hidden">
+<div
+	class="flex h-[calc(100vh-theme(spacing.16)-4rem)] gap-6 w-full overflow-hidden"
+>
 	<!-- Left Side: Collapsible Topics list (Desktop only) -->
 	<div class="hidden xl:block h-full shrink-0">
 		<NotesSidebar
@@ -262,9 +274,15 @@
 	{#if isSidebarOpen}
 		<div
 			class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 xl:hidden"
-			onclick={(e) => { if (e.target === e.currentTarget) isSidebarOpen = false; }}
+			onclick={(e) => {
+				if (e.target === e.currentTarget) isSidebarOpen = false;
+			}}
 			onkeydown={(e) => {
-				if (e.key === 'Escape' || (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' '))) {
+				if (
+					e.key === "Escape" ||
+					(e.target === e.currentTarget &&
+						(e.key === "Enter" || e.key === " "))
+				) {
 					e.preventDefault();
 					isSidebarOpen = false;
 				}
@@ -272,7 +290,9 @@
 			role="button"
 			tabindex="0"
 		>
-			<div class="absolute left-0 top-0 bottom-0 w-80 bg-white shadow-xl h-full flex flex-col">
+			<div
+				class="absolute left-0 top-0 bottom-0 w-80 bg-white shadow-xl h-full flex flex-col"
+			>
 				<NotesSidebar
 					topics={topicsList}
 					selectedTopicId={topicId}
@@ -285,33 +305,50 @@
 	<!-- Center Panel & Right Panel Wrapper -->
 	<div class="flex-1 flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
 		<!-- Middle: Content Area (Scrolls) -->
-		<div class="flex-1 flex flex-col h-full overflow-y-auto bg-slate-50/20 border border-slate-200/50 rounded-2xl p-6 gap-6 relative">
+		<div
+			class="flex-1 flex flex-col h-full overflow-y-auto bg-slate-50/20 border border-slate-200/50 rounded-2xl p-6 gap-6 relative"
+		>
 			<!-- Admin-only compact draft notice (does not interrupt the note body) -->
 			{#if isAdmin && noteDetails?.is_preview}
-				<div class="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-[10px] font-semibold text-amber-800">
-					<span class="flex items-center gap-1.5"><span>⚠️</span> Draft preview — visible to admins only until published.</span>
-					<a href="/admin/topic-notes" class="text-amber-700 hover:text-amber-900 underline shrink-0">Review queue →</a>
+				<div
+					class="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-[10px] font-semibold text-amber-800"
+				>
+					<span class="flex items-center gap-1.5"
+						><span>⚠️</span> Draft preview — visible to admins only until
+						published.</span
+					>
+					<a
+						href="/admin/topic-notes"
+						class="text-amber-700 hover:text-amber-900 underline shrink-0"
+						>Review queue →</a
+					>
 				</div>
 			{/if}
 
 			<!-- Header Action bar -->
-			<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+			<div
+				class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5"
+			>
 				<div class="flex flex-col gap-1">
 					<div class="flex items-center gap-3">
 						<button
-							onclick={() => isSidebarOpen = true}
+							onclick={() => (isSidebarOpen = true)}
 							class="xl:hidden bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-1.5 px-3 rounded-lg border"
 						>
 							☰ Topics
 						</button>
 
 						<h1 class="font-title text-lg font-bold text-slate-900">
-							{currentTopicItem?.name || 'Study Notes'}
+							{currentTopicItem?.name || "Study Notes"}
 						</h1>
 					</div>
 					{#if noteDetails}
 						<span class="text-[10px] text-slate-400 font-semibold">
-							Version {noteDetails.version} · {noteDetails.level.replace(/_/g, ' ')} · Estimated {noteDetails.estimated_reading_minutes} min read
+							Version {noteDetails.version} · {noteDetails.level.replace(
+								/_/g,
+								" ",
+							)} · Estimated {noteDetails.estimated_reading_minutes}
+							min read
 						</span>
 					{/if}
 				</div>
@@ -321,27 +358,40 @@
 						<button
 							onclick={toggleBookmark}
 							aria-pressed={userState?.is_bookmarked || false}
-							class="text-xs py-1.5 px-3 rounded-xl border font-semibold flex items-center gap-1.5 transition-colors {userState?.is_bookmarked ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}"
+							class="text-xs py-1.5 px-3 rounded-xl border font-semibold flex items-center gap-1.5 transition-colors {userState?.is_bookmarked
+								? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+								: 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}"
 						>
-							<span>{userState?.is_bookmarked ? '★ Bookmarked' : '☆ Bookmark'}</span>
+							<span
+								>{userState?.is_bookmarked
+									? "★ Bookmarked"
+									: "☆ Bookmark"}</span
+							>
 						</button>
 
 						<!-- Divider separating the bookmark action from the view tabs -->
-						<div class="hidden md:block w-px h-6 bg-slate-200"></div>
+						<div
+							class="hidden md:block w-px h-6 bg-slate-200"
+						></div>
 					{/if}
 
 					<!-- View Mode Tabs -->
-					<div role="tablist" class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-0.5">
-						{#each [
-							{ id: 'notes', label: 'Learn Notes' },
-							{ id: 'revision', label: 'Revision' },
-							{ id: 'quiz', label: 'Quiz' }
-						] as tab}
+					<div
+						role="tablist"
+						class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-0.5"
+					>
+						{#each [{ id: "notes", label: "Learn Notes" }, { id: "revision", label: "Revision" }, { id: "quiz", label: "Quiz" }] as tab}
 							<button
 								role="tab"
 								aria-selected={activeView === tab.id}
-								onclick={() => setView(tab.id as 'notes' | 'revision' | 'quiz')}
-								class="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all {activeView === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'}"
+								onclick={() =>
+									setView(
+										tab.id as "notes" | "revision" | "quiz",
+									)}
+								class="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all {activeView ===
+								tab.id
+									? 'bg-white text-slate-900 shadow-sm'
+									: 'text-slate-500 hover:bg-white/70 hover:text-slate-900'}"
 							>
 								{tab.label}
 							</button>
@@ -352,41 +402,74 @@
 
 			<!-- Main View Router -->
 			{#if loading}
-				<LoadingState message="Opening study notes…" class="min-h-[300px]" />
+				<LoadingState
+					message="Opening study notes…"
+					class="min-h-[300px]"
+				/>
 			{:else if error}
-				<div class="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm leading-relaxed text-rose-700">
+				<div
+					class="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm leading-relaxed text-rose-700"
+				>
 					<p><strong>Failed to load:</strong> {error}</p>
-					<Button variant="outline" size="sm" class="border-rose-200 bg-white text-rose-700 hover:bg-rose-100" onclick={() => loadNoteData(topicId)}>
+					<Button
+						variant="outline"
+						size="sm"
+						class="border-rose-200 bg-white text-rose-700 hover:bg-rose-100"
+						onclick={() => loadNoteData(topicId)}
+					>
 						Try again
 					</Button>
 				</div>
 			{:else if generating}
-				<GenerationProgress onCancel={() => generating = false} />
+				<GenerationProgress onCancel={() => (generating = false)} />
 			{:else if canGenerate}
 				<!-- Initial Generation Screen -->
-				<div class="m-auto flex max-w-[420px] flex-col items-center gap-5 rounded-2xl border border-dashed border-blue-200 bg-blue-50/30 p-12 text-center">
-					<div class="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl">🧠</div>
+				<div
+					class="m-auto flex max-w-[420px] flex-col items-center gap-5 rounded-2xl border border-dashed border-blue-200 bg-blue-50/30 p-12 text-center"
+				>
+					<div
+						class="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl"
+					>
+						🧠
+					</div>
 					<div class="flex flex-col gap-1.5">
-						<h3 class="font-title text-base font-bold text-slate-800">Generate AI DSA Study Notes</h3>
+						<h3
+							class="font-title text-base font-bold text-slate-800"
+						>
+							Generate AI DSA Study Notes
+						</h3>
 						<p class="text-sm leading-relaxed text-slate-500">
-							No study notes exist yet for <strong class="text-slate-700">{currentTopicItem?.name}</strong>. Google Gemini will build a detailed revision sheet, code templates, and an interactive quiz.
+							No study notes exist yet for <strong
+								class="text-slate-700"
+								>{currentTopicItem?.name}</strong
+							>. Google Gemini will build a detailed revision
+							sheet, code templates, and an interactive quiz.
 						</p>
 					</div>
-					<Button class="h-10 w-full bg-blue-600 text-sm font-semibold text-white shadow hover:bg-blue-700" onclick={handleGenerateNotes}>
+					<Button
+						class="h-10 w-full bg-blue-600 text-sm font-semibold text-white shadow hover:bg-blue-700"
+						onclick={handleGenerateNotes}
+					>
 						Generate Topic Notes
 					</Button>
 				</div>
 			{:else if noteDetails}
-				{#if activeView === 'notes'}
+				{#if activeView === "notes"}
 					<!-- 1. Notes View Mode -->
 					<div class="flex flex-col gap-6">
 						{#each noteDetails.content.sections as section}
-							{#if section.section_key !== 'revision_notes'}
+							{#if section.section_key !== "revision_notes"}
 								<div id="section-{section.section_key}">
 									<NoteSection
 										{section}
-										completed={userState?.completed_sections.includes(section.section_key) || false}
-										onToggleComplete={(checked) => handleToggleSectionRead(section.section_key, checked)}
+										completed={userState?.completed_sections.includes(
+											section.section_key,
+										) || false}
+										onToggleComplete={(checked) =>
+											handleToggleSectionRead(
+												section.section_key,
+												checked,
+											)}
 									/>
 								</div>
 							{/if}
@@ -395,7 +478,11 @@
 						<!-- Code Templates Section -->
 						{#if noteDetails.content.code_templates && noteDetails.content.code_templates.length > 0}
 							<div class="flex flex-col gap-3.5 pt-4">
-								<h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Core Implementations</h3>
+								<h3
+									class="text-xs font-bold text-slate-800 uppercase tracking-wider"
+								>
+									Core Implementations
+								</h3>
 								<div class="flex flex-col gap-5">
 									{#each noteDetails.content.code_templates as template}
 										<CodeTemplate {template} />
@@ -407,40 +494,52 @@
 						<!-- Complexity Table Section -->
 						{#if noteDetails.content.complexity_notes}
 							<div class="pt-4">
-								<ComplexityTable notes={noteDetails.content.complexity_notes} />
+								<ComplexityTable
+									notes={noteDetails.content.complexity_notes}
+								/>
 							</div>
 						{/if}
 					</div>
-				{:else if activeView === 'revision'}
+				{:else if activeView === "revision"}
 					<!-- 2. Revision View Mode -->
 					<RevisionView
 						data={{
-							topic_name: currentTopicItem?.name || 'DSA Topic',
+							topic_name: currentTopicItem?.name || "DSA Topic",
 							level: noteDetails.level,
-							revision_section: noteDetails.content.sections.find(s => s.section_key === 'revision_notes'),
-							code_templates: noteDetails.content.code_templates || [],
-							confidence_checklist: noteDetails.content.confidence_checklist || [],
-							checklist_state: userState?.checklist_state || {}
+							revision_section: noteDetails.content.sections.find(
+								(s) => s.section_key === "revision_notes",
+							),
+							code_templates:
+								noteDetails.content.code_templates || [],
+							confidence_checklist:
+								noteDetails.content.confidence_checklist || [],
+							checklist_state: userState?.checklist_state || {},
 						}}
 						onToggleCheck={handleToggleChecklist}
 						onMarkTopicCompleted={handleMarkTopicCompleted}
-						topicCompleted={userState?.status === 'completed'}
+						topicCompleted={userState?.status === "completed"}
 					/>
-				{:else if activeView === 'quiz'}
+				{:else if activeView === "quiz"}
 					<!-- 3. Quiz View Mode -->
 					<QuizRunner
 						noteId={noteDetails.id}
-						onQuizCompleted={(score, total) => patchLocalTopic({ lastQuiz: { score, total } })}
+						onQuizCompleted={(score, total) =>
+							patchLocalTopic({ lastQuiz: { score, total } })}
 					/>
 				{/if}
 			{/if}
 		</div>
 
 		<!-- Right Side: TOC + Checklist (Desktop only - hidden in quiz/revision) -->
-		{#if noteDetails && activeView === 'notes'}
-			<div bind:this={rightColumn} class="hidden lg:flex flex-col gap-6 w-80 shrink-0 h-full overflow-y-auto pr-1">
+		{#if noteDetails && activeView === "notes"}
+			<div
+				bind:this={rightColumn}
+				class="hidden lg:flex flex-col gap-6 w-80 shrink-0 h-full overflow-y-auto pr-1"
+			>
 				<TocPanel
-					sections={noteDetails.content.sections.filter(s => s.section_key !== 'revision_notes')}
+					sections={noteDetails.content.sections.filter(
+						(s) => s.section_key !== "revision_notes",
+					)}
 					completedSections={userState?.completed_sections || []}
 					onSelectSection={scrollToSection}
 				/>
@@ -451,7 +550,7 @@
 						state={userState?.checklist_state || {}}
 						onToggleCheck={handleToggleChecklist}
 						onMarkTopicCompleted={handleMarkTopicCompleted}
-						topicCompleted={userState?.status === 'completed'}
+						topicCompleted={userState?.status === "completed"}
 					/>
 				{/if}
 			</div>

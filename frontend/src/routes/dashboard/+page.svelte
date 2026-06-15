@@ -11,6 +11,8 @@
 	import EmptyState from '$lib/components/app/EmptyState.svelte';
 	import LoadingState from '$lib/components/app/LoadingState.svelte';
 	import StreakHeatmap from '$lib/components/app/StreakHeatmap.svelte';
+	import ProgressOverviewCard from '$lib/components/dashboard/progress-overview-card.svelte';
+	import TimeSpentCard from '$lib/components/dashboard/time-spent-card.svelte';
 
 	interface DashboardSummary {
 		solved_count: number;
@@ -21,10 +23,46 @@
 		recommended_problems: Array<{ id: number; title: string; difficulty: string; topic: string }>;
 	}
 
+	interface TopicNoteItem {
+		state?: { status: string } | null;
+	}
+
 	let stats = $state<DashboardSummary | null>(null);
 	let activity = $state<Array<{ date: string; count: number }>>([]);
+	let topicNotes = $state<TopicNoteItem[]>([]);
 	let loading = $state(true);
 	let error = $state('');
+
+	// Progress Overview — real counts derived from the user's topic-note state.
+	let progress = $derived.by(() => {
+		const total = topicNotes.length;
+		let completed = 0;
+		let inProgress = 0;
+		for (const t of topicNotes) {
+			const s = t.state?.status;
+			if (s === 'completed' || s === 'revised') completed++;
+			else if (t.state) inProgress++; // has state but still 'reading'
+		}
+		return { total, completed, inProgress, notStarted: total - completed - inProgress };
+	});
+
+	// Weekly activity — real attempts/day from the activity feed (last 7 days),
+	// with a week-over-week change vs the prior 7 days.
+	const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	let weekly = $derived.by(() => {
+		const sum = (rows: Array<{ count: number }>) => rows.reduce((s, r) => s + r.count, 0);
+		const last7 = activity.slice(-7);
+		const prev7 = activity.slice(-14, -7);
+		const total = sum(last7);
+		const prevTotal = sum(prev7);
+		const change =
+			prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : total > 0 ? 100 : null;
+		const bars = last7.map((r) => ({
+			label: DAY_LABELS[new Date(r.date + 'T00:00:00').getDay()] ?? '',
+			value: r.count
+		}));
+		return { total, change, bars };
+	});
 
 	let firstName = $derived.by(() => {
 		const u = getStoredUser<{ full_name?: string }>();
@@ -44,6 +82,10 @@
 			api<Array<{ date: string; count: number }>>('/dashboard/activity')
 				.then((rows) => (activity = rows))
 				.catch(() => (activity = []));
+			// Topic-note state powers the Progress Overview card; non-critical.
+			api<TopicNoteItem[]>('/me/topic-notes')
+				.then((rows) => (topicNotes = rows))
+				.catch(() => (topicNotes = []));
 		} catch (err: any) {
 			if (err instanceof ApiError && err.status === 401) {
 				clearAuth();
@@ -124,7 +166,7 @@
 					</svg>
 				{/snippet}
 			</StatCard>
-			<StatCard label="Total Attempted" value={stats.attempted_count} accent="blue">
+			<StatCard label="Total Attempted" value={stats.attempted_count} accent="teal">
 				{#snippet icon()}
 					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="h-6 w-6">
 						<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
@@ -146,6 +188,24 @@
 					</svg>
 				{/snippet}
 			</StatCard>
+		</div>
+
+		<!-- Progress Overview + Weekly Activity -->
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			<ProgressOverviewCard
+				completed={progress.completed}
+				inProgress={progress.inProgress}
+				notStarted={progress.notStarted}
+				total={progress.total}
+				href="/topics"
+			/>
+			<TimeSpentCard
+				title="Weekly Activity"
+				subtitle="Problems attempted in the last 7 days"
+				headline={`${weekly.total} attempts`}
+				changePercent={weekly.change}
+				bars={weekly.bars}
+			/>
 		</div>
 
 		<!-- Activity heatmap -->

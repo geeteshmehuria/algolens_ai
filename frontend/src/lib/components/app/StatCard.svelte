@@ -4,6 +4,7 @@
 	const ACCENTS: Record<string, string> = {
 		blue: "bg-blue-50 text-blue-600 border-blue-100",
 		emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+		teal: "bg-teal-50 text-teal-600 border-teal-100",
 		amber: "bg-amber-50 text-amber-600 border-amber-100",
 		rose: "bg-rose-50 text-rose-600 border-rose-100",
 		slate: "bg-slate-100 text-slate-600 border-slate-200"
@@ -24,7 +25,7 @@
 	} = $props<{
 		label: string;
 		value: string | number;
-		accent?: "blue" | "emerald" | "amber" | "rose" | "slate";
+		accent?: "blue" | "emerald" | "teal" | "amber" | "rose" | "slate";
 		valueClass?: string;
 		icon?: Snippet;
 	}>();
