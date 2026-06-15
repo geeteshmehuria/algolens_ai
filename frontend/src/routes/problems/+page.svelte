@@ -10,6 +10,7 @@
 	import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
+	import IllustratedPageHero from '$lib/components/layout/illustrated-page-hero.svelte';
 
 	interface Problem {
 		id: number;
@@ -79,17 +80,22 @@
 </script>
 
 <div class="flex flex-col gap-6">
-	<!-- Filter controls -->
-	<Card class="border-slate-200 bg-white p-5">
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-			<div class="flex flex-col gap-1.5">
-				<label for="search" class="text-xs font-semibold text-slate-500">Search Problem</label>
-				<Input type="text" id="search" bind:value={searchQuery} placeholder="Search by title..." class="h-10 border-slate-200 bg-white" />
+	<!-- Illustrated hero with search + filters -->
+	<IllustratedPageHero
+		variant="problems"
+		eyebrow="Practice"
+		title="Practice Problems"
+		subtitle="Sharpen your DSA skills with curated, interview-ready problems."
+	>
+		{#snippet controls()}
+			<div class="flex w-full flex-col gap-1.5 sm:w-64">
+				<label for="search" class="text-xs font-semibold text-muted-foreground">Search problem</label>
+				<Input type="text" id="search" bind:value={searchQuery} placeholder="Search by title..." class="h-10 border-input bg-card" />
 			</div>
 
-			<div class="flex flex-col gap-1.5">
-				<label for="topic" class="text-xs font-semibold text-slate-500">Topic</label>
-				<select id="topic" class="h-10 border border-slate-200 rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer text-slate-800" bind:value={selectedTopic}>
+			<div class="flex w-full flex-col gap-1.5 sm:w-48">
+				<label for="topic" class="text-xs font-semibold text-muted-foreground">Topic</label>
+				<select id="topic" class="h-10 cursor-pointer rounded-lg border border-input bg-card px-3 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25" bind:value={selectedTopic}>
 					<option value="">All Topics</option>
 					{#each topics as topic}
 						<option value={topic.id.toString()}>{topic.name}</option>
@@ -97,17 +103,17 @@
 				</select>
 			</div>
 
-			<div class="flex flex-col gap-1.5">
-				<label for="difficulty" class="text-xs font-semibold text-slate-500">Difficulty</label>
-				<select id="difficulty" class="h-10 border border-slate-200 rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer text-slate-800" bind:value={selectedDifficulty}>
+			<div class="flex w-full flex-col gap-1.5 sm:w-40">
+				<label for="difficulty" class="text-xs font-semibold text-muted-foreground">Difficulty</label>
+				<select id="difficulty" class="h-10 cursor-pointer rounded-lg border border-input bg-card px-3 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25" bind:value={selectedDifficulty}>
 					<option value="">All Difficulties</option>
 					<option value="Easy">Easy</option>
 					<option value="Medium">Medium</option>
 					<option value="Hard">Hard</option>
 				</select>
 			</div>
-		</div>
-	</Card>
+		{/snippet}
+	</IllustratedPageHero>
 
 	<!-- Problems Table -->
 	<Card class="border-slate-200 bg-white overflow-hidden p-0">

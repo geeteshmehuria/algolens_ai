@@ -6,6 +6,7 @@
 	import { Button } from "$lib/components/ui/button";
 	import LoadingState from "$lib/components/app/LoadingState.svelte";
 	import EmptyState from "$lib/components/app/EmptyState.svelte";
+	import IllustratedPageHero from "$lib/components/layout/illustrated-page-hero.svelte";
 
 	interface TopicItem {
 		id: number;
@@ -138,40 +139,48 @@
 </script>
 
 <div class="flex w-full flex-col gap-6">
-	<!-- Top Summary Banner -->
-	<div
-		class="surface-hero flex flex-col justify-between gap-4 rounded-2xl border border-blue-100/70 p-6 md:flex-row md:items-center"
+	<!-- Illustrated hero with search + category controls -->
+	<IllustratedPageHero
+		variant="notes"
+		eyebrow="Study Notes"
+		title="AI DSA Study Notes"
+		subtitle="Smart, structured, and AI-generated notes to help you learn faster and remember better — across 25 DSA categories."
 	>
-		<div class="min-w-0">
-			<h1 class="font-title text-xl font-bold tracking-tight text-slate-900">
-				AI DSA Study Notes
-			</h1>
-			<p class="mt-1 text-sm text-slate-600">
-				Deep structured summaries, complexity derivations, and interactive
-				quizzes across 25 DSA categories.
-			</p>
-		</div>
-
-		<div class="relative w-full shrink-0 md:w-72">
-			<svg
-				class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				stroke-width="2"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-			</svg>
-			<input
-				type="text"
-				placeholder="Search topics…"
-				bind:value={searchQuery}
-				aria-label="Search topics"
-				class="w-full rounded-lg border border-slate-200 bg-white/80 py-2 pl-9 pr-3 text-sm transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-			/>
-		</div>
-	</div>
+		{#snippet controls()}
+			<div class="relative w-full sm:w-72">
+				<svg
+					class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+				</svg>
+				<input
+					type="text"
+					placeholder="Search topics…"
+					bind:value={searchQuery}
+					aria-label="Search topics"
+					class="w-full rounded-lg border border-input bg-card/80 py-2 pl-9 pr-3 text-sm text-foreground transition-all focus:border-primary focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring/25"
+				/>
+			</div>
+			<div class="w-full sm:w-auto">
+				<label class="sr-only" for="category-filter">Filter by category</label>
+				<select
+					id="category-filter"
+					bind:value={categoryFilter}
+					class="h-[38px] w-full rounded-lg border border-input bg-card px-3 text-sm font-semibold text-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25 sm:w-auto"
+				>
+					<option value="all">All categories</option>
+					{#each categories as cat}
+						<option value={cat}>{cat}</option>
+					{/each}
+				</select>
+			</div>
+		{/snippet}
+	</IllustratedPageHero>
 
 	<!-- Filters Row -->
 	<div class="flex flex-wrap items-center gap-2">
@@ -181,26 +190,12 @@
 				aria-pressed={filterType === filter.id}
 				class="rounded-lg border px-4 py-2 text-xs font-semibold transition-all duration-200 {filterType ===
 				filter.id
-					? 'border-blue-600 bg-blue-600 text-white shadow-sm'
-					: 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'}"
+					? 'border-primary bg-primary text-primary-foreground shadow-sm'
+					: 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'}"
 			>
 				{filter.label}
 			</button>
 		{/each}
-
-		<div class="ml-auto">
-			<label class="sr-only" for="category-filter">Filter by category</label>
-			<select
-				id="category-filter"
-				bind:value={categoryFilter}
-				class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-all focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-			>
-				<option value="all">All categories</option>
-				{#each categories as cat}
-					<option value={cat}>{cat}</option>
-				{/each}
-			</select>
-		</div>
 	</div>
 
 	<!-- Topics Grid -->

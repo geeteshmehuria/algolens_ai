@@ -6,6 +6,7 @@
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
+	import IllustratedPageHero from '$lib/components/layout/illustrated-page-hero.svelte';
 
 	interface RevisionItem {
 		id: number;
@@ -47,14 +48,12 @@
 </script>
 
 <div class="flex flex-col gap-6 max-w-[900px] mx-auto w-full">
-	<Card class="border-slate-200 bg-white p-6">
-		<CardHeader class="p-0">
-			<CardTitle class="text-lg font-bold text-slate-900">DSA Revision Queue</CardTitle>
-			<CardDescription class="text-xs text-slate-500">
-				Interval-spaced revisions optimize logic retention. Solve overdue items today!
-			</CardDescription>
-		</CardHeader>
-	</Card>
+	<IllustratedPageHero
+		variant="revision"
+		eyebrow="Revision"
+		title="Revision Hub"
+		subtitle="Review important concepts, weak areas, and bookmarked topics — interval-spaced for long-term retention."
+	/>
 
 	<Card class="border-slate-200 bg-white p-6">
 		{#if loading}

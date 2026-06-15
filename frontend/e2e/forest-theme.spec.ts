@@ -49,6 +49,12 @@ const contents = {
 	version: 'test'
 };
 
+const problems = [
+	{ id: 1, title: 'Two Sum', difficulty: 'Easy', topic_id: 1, pattern_id: 1, leetcode_url: 'https://leetcode.com/problems/two-sum/' },
+	{ id: 2, title: 'Course Schedule', difficulty: 'Medium', topic_id: 2, pattern_id: 2, leetcode_url: 'https://leetcode.com/problems/course-schedule/' },
+	{ id: 3, title: 'Word Ladder', difficulty: 'Hard', topic_id: 2, pattern_id: 2 }
+];
+
 async function mockApi(page: Page) {
 	await page.route('**/api/**', (route) => {
 		const url = route.request().url();
@@ -58,6 +64,8 @@ async function mockApi(page: Page) {
 		if (url.includes('/dashboard/activity')) return json(activity);
 		if (url.includes('/me/topic-notes')) return json(topicNotes);
 		if (url.includes('/common/contents')) return json(contents);
+		if (url.includes('/common/master-data')) return json({ topics: [{ id: 1, name: 'Arrays' }, { id: 2, name: 'Graphs' }] });
+		if (url.includes('/problems')) return json(problems);
 		return json({});
 	});
 }
@@ -99,4 +107,40 @@ for (const theme of ['light', 'dark'] as const) {
 		await expect(page.getByRole('heading', { name: 'AI DSA Study Notes' })).toBeVisible();
 		await page.screenshot({ path: `test-results/forest-topics-${theme}.png`, fullPage: true });
 	});
+
+	test(`problems renders in ${theme}`, async ({ page }) => {
+		const errors: string[] = [];
+		page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+		page.on('pageerror', (e) => errors.push(e.message));
+		await page.addInitScript(
+			([t]) => {
+				localStorage.setItem('theme', t);
+				localStorage.setItem('token', 'e2e-fake');
+			},
+			[theme]
+		);
+		await mockApi(page);
+		await page.goto('/problems');
+		await expect(page.getByRole('heading', { name: 'Practice Problems' })).toBeVisible();
+		await page.screenshot({ path: `test-results/forest-problems-${theme}.png`, fullPage: true });
+		expect(errors, errors.join(' | ')).toEqual([]);
+	});
 }
+
+test('dashboard hero stacks cleanly on mobile (no overflow)', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.addInitScript(() => {
+		localStorage.setItem('theme', 'dark');
+		localStorage.setItem('token', 'e2e-fake');
+		localStorage.setItem('user', JSON.stringify({ full_name: 'Alex Green', email: 'alex@test.dev' }));
+	});
+	await mockApi(page);
+	await page.goto('/dashboard');
+	await expect(page.getByText('Progress Overview')).toBeVisible();
+	// No horizontal overflow.
+	const overflow = await page.evaluate(
+		() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+	);
+	expect(overflow).toBe(false);
+	await page.screenshot({ path: 'test-results/forest-dashboard-mobile.png', fullPage: true });
+});

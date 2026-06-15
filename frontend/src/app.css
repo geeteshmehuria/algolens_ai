@@ -367,6 +367,63 @@ select {
   animation: dropdown-in 0.14s var(--ease-standard) both;
 }
 
+/* ---- Illustrated page hero ----
+   Soft forest-green gradient panel with a subtle green glow in the top-right
+   (where the illustration sits). Centralized so every hero shares one surface. */
+.hero-surface {
+  background-image:
+    radial-gradient(
+      120% 130% at 100% 0%,
+      hsl(96 50% 90% / 0.9) 0%,
+      transparent 55%
+    ),
+    linear-gradient(135deg, hsl(108 38% 98%) 0%, hsl(120 38% 95%) 100%);
+  border: 1px solid hsl(140 30% 85%);
+}
+.dark .hero-surface {
+  background-image:
+    radial-gradient(
+      120% 130% at 100% 0%,
+      hsl(142 60% 38% / 0.2) 0%,
+      transparent 55%
+    ),
+    linear-gradient(135deg, hsl(150 45% 6%) 0%, hsl(146 42% 9%) 100%);
+  border: 1px solid hsl(140 45% 70% / 0.16);
+  box-shadow:
+    inset 0 1px 0 hsl(140 60% 80% / 0.06),
+    0 18px 50px -28px hsl(142 70% 30% / 0.5);
+}
+
+/* Slow floating + sparkle for hero illustrations (disabled under reduced motion). */
+@keyframes hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.animate-float {
+  animation: hero-float 6s var(--ease-standard) infinite;
+}
+@keyframes hero-sparkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.hero-sparkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hero-sparkle 2.8s var(--ease-standard) infinite;
+}
+
 /* =====================================================================
    Dark compatibility layer
    ---------------------------------------------------------------------

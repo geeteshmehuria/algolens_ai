@@ -10,6 +10,7 @@
 		CardDescription,
 	} from "$lib/components/ui/card";
 	import { Button } from "$lib/components/ui/button";
+	import IllustratedPageHero from "$lib/components/layout/illustrated-page-hero.svelte";
 
 	interface Roadmap {
 		id: number;
@@ -61,27 +62,18 @@
 </script>
 
 <div class="flex flex-col gap-6 w-full">
-	<Card class="border-slate-200 bg-white p-6">
-		<div class="flex justify-between items-center flex-wrap gap-4">
-			<div class="flex flex-col gap-1">
-				<h2 class="text-lg font-bold text-slate-900">
-					Personalized Study Roadmaps
-				</h2>
-				<p class="text-xs text-slate-500">
-					Gemini constructs tailored 7-day training modules reviewing
-					weak spots.
-				</p>
-			</div>
-			<Button
-				class="bg-blue-600 hover:bg-blue-700 text-white text-xs h-10 px-4 font-semibold"
-				onclick={generateRoadmap}
-				disabled={isGenerating}
-			>
-				{#if isGenerating}Generating roadmap...{:else}Generate 7-Day
-					Plan{/if}
+	<IllustratedPageHero
+		variant="roadmap"
+		eyebrow="Roadmap"
+		title="DSA Roadmap"
+		subtitle="Follow a structured path from basics to interview-ready problem solving."
+	>
+		{#snippet actions()}
+			<Button onclick={generateRoadmap} disabled={isGenerating}>
+				{#if isGenerating}Generating roadmap...{:else}Generate 7-Day Plan{/if}
 			</Button>
-		</div>
-	</Card>
+		{/snippet}
+	</IllustratedPageHero>
 
 	<Card class="border-slate-200 bg-white p-6">
 		{#if loading}

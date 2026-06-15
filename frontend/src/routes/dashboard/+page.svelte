@@ -13,6 +13,7 @@
 	import StreakHeatmap from '$lib/components/app/StreakHeatmap.svelte';
 	import ProgressOverviewCard from '$lib/components/dashboard/progress-overview-card.svelte';
 	import TimeSpentCard from '$lib/components/dashboard/time-spent-card.svelte';
+	import IllustratedPageHero from '$lib/components/layout/illustrated-page-hero.svelte';
 
 	interface DashboardSummary {
 		solved_count: number;
@@ -116,14 +117,23 @@
 {:else if stats}
 	<div class="flex flex-col gap-6">
 		<!-- Hero / welcome -->
-		<div class="surface-hero flex flex-col gap-1 rounded-2xl border border-blue-100/70 p-6">
-			<h2 class="font-title text-2xl font-bold tracking-tight text-slate-900">
-				Welcome back{firstName ? `, ${firstName}` : ''} 👋
-			</h2>
-			<p class="text-sm text-slate-600">
-				Here's a snapshot of your progress. Keep your streak alive and tackle a recommended problem.
-			</p>
-		</div>
+		<IllustratedPageHero
+			variant="dashboard"
+			eyebrow="Dashboard"
+			title={`Welcome back${firstName ? `, ${firstName}` : ''} 👋`}
+			subtitle="Continue your DSA journey and keep your learning streak alive."
+		>
+			{#snippet actions()}
+				<Button
+					href={stats?.recommended_problems?.length
+						? `/problems/${stats.recommended_problems[0].id}`
+						: '/problems'}
+				>
+					Continue learning
+				</Button>
+				<Button variant="outline" href="/roadmap">View roadmap</Button>
+			{/snippet}
+		</IllustratedPageHero>
 
 		<!-- Continue card: nudge the user toward the single best next action -->
 		{#if stats.revision_due_count > 0}
