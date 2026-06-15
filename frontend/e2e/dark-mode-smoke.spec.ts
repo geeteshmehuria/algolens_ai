@@ -66,3 +66,18 @@ test('preference persists across reload', async ({ page }) => {
 	await page.reload();
 	await expect(page.locator('html')).toHaveClass(/dark/);
 });
+
+test('dark is the default when no preference is stored', async ({ page }) => {
+	// No theme written to localStorage → should default to dark, before paint.
+	await page.addInitScript(() => localStorage.removeItem('theme'));
+	await page.goto('/login');
+	await expect(page.locator('html')).toHaveClass(/dark/);
+});
+
+test('an explicit light choice overrides the dark default and persists', async ({ page }) => {
+	await page.addInitScript(() => localStorage.setItem('theme', 'light'));
+	await page.goto('/login');
+	await expect(page.locator('html')).not.toHaveClass(/dark/);
+	await page.reload();
+	await expect(page.locator('html')).not.toHaveClass(/dark/);
+});

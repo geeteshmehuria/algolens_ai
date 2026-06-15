@@ -116,36 +116,36 @@
 	</IllustratedPageHero>
 
 	<!-- Problems Table -->
-	<Card class="border-slate-200 bg-white overflow-hidden p-0">
+	<Card class="border-border bg-card overflow-hidden p-0">
 		{#if loading}
 			<div class="flex flex-col items-center justify-center p-12 gap-3">
-				<div class="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-blue-600"></div>
-				<p class="text-sm text-slate-500 font-medium">Loading problems...</p>
+				<div class="animate-spin rounded-full h-8 w-8 border-4 border-border border-t-primary"></div>
+				<p class="text-sm text-muted-foreground font-medium">Loading problems...</p>
 			</div>
 		{:else if filteredProblems.length === 0}
 			<div class="flex flex-col items-center justify-center p-16 text-center gap-1.5">
-				<h3 class="text-base font-bold text-slate-900">No problems found</h3>
-				<p class="text-xs text-slate-500 max-w-[320px]">Try adjusting your search queries or filter selections.</p>
+				<h3 class="text-base font-bold text-foreground">No problems found</h3>
+				<p class="text-xs text-muted-foreground max-w-[320px]">Try adjusting your search queries or filter selections.</p>
 			</div>
 		{:else}
 			<div class="w-full overflow-x-auto">
 				<Table>
-					<TableHeader class="bg-slate-50">
-						<TableRow class="hover:bg-transparent border-slate-200">
-							<TableHead class="font-bold text-slate-600 pl-6 h-12">Title</TableHead>
-							<TableHead class="font-bold text-slate-600 h-12">Topic</TableHead>
-							<TableHead class="font-bold text-slate-600 h-12">Difficulty</TableHead>
-							<TableHead class="font-bold text-slate-600 h-12">LeetCode Link</TableHead>
-							<TableHead class="font-bold text-slate-600 pr-6 h-12 text-right">Actions</TableHead>
+					<TableHeader class="bg-muted/50">
+						<TableRow class="hover:bg-transparent border-border">
+							<TableHead class="font-bold text-muted-foreground pl-6 h-12">Title</TableHead>
+							<TableHead class="font-bold text-muted-foreground h-12">Topic</TableHead>
+							<TableHead class="font-bold text-muted-foreground h-12">Difficulty</TableHead>
+							<TableHead class="font-bold text-muted-foreground h-12">LeetCode Link</TableHead>
+							<TableHead class="font-bold text-muted-foreground pr-6 h-12 text-right">Actions</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{#each filteredProblems as problem}
 							{@const diffBorder = problem.difficulty === 'Easy' ? 'border-l-emerald-400' : problem.difficulty === 'Medium' ? 'border-l-amber-400' : 'border-l-rose-400'}
-							<TableRow class="border-slate-200 hover:bg-slate-50/50 transition-all">
-								<TableCell class="border-l-[3px] {diffBorder} font-bold text-slate-900 pl-6 py-4">{problem.title}</TableCell>
+							<TableRow class="border-border hover:bg-accent transition-all">
+								<TableCell class="border-l-[3px] {diffBorder} font-bold text-foreground pl-6 py-4">{problem.title}</TableCell>
 								<TableCell class="py-4">
-									<span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+									<span class="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
 										{topics.find(t => t.id === problem.topic_id)?.name || 'General'}
 									</span>
 								</TableCell>
@@ -156,15 +156,15 @@
 								</TableCell>
 								<TableCell class="py-4">
 									{#if problem.leetcode_url}
-										<a href={problem.leetcode_url} target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline">
+										<a href={problem.leetcode_url} target="_blank" rel="noopener noreferrer" class="text-xs text-primary hover:text-primary/80 font-medium hover:underline">
 											View URL ↗
 										</a>
 									{:else}
-										<span class="text-xs text-slate-400">—</span>
+										<span class="text-xs text-muted-foreground">—</span>
 									{/if}
 								</TableCell>
 								<TableCell class="pr-6 py-4 text-right">
-									<Button class="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-4" href="/problems/{problem.id}">
+									<Button class="text-xs h-8 px-4" href="/problems/{problem.id}">
 										Learn & Practice
 									</Button>
 								</TableCell>

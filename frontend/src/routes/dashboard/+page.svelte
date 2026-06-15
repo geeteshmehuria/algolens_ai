@@ -260,7 +260,7 @@
 							>
 								<div class="flex min-w-0 flex-col gap-1.5">
 									<span class="truncate text-sm font-semibold text-slate-800">{problem.title}</span>
-									<span class="w-fit rounded-full bg-slate-200/60 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+									<span class="w-fit rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
 										{problem.topic}
 									</span>
 								</div>

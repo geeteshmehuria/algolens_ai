@@ -9,10 +9,12 @@ export type Theme = "light" | "dark" | "system";
 
 const STORAGE_KEY = "theme";
 
+// Dark is the default experience: when the user has not explicitly chosen a
+// theme, fall back to "dark" (not "system"). A saved preference always wins.
 function getStored(): Theme {
-	if (!browser) return "system";
+	if (!browser) return "dark";
 	const t = localStorage.getItem(STORAGE_KEY);
-	return t === "light" || t === "dark" || t === "system" ? t : "system";
+	return t === "light" || t === "dark" || t === "system" ? t : "dark";
 }
 
 function systemPrefersDark(): boolean {
