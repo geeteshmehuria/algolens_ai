@@ -19,6 +19,10 @@
 		topic_id: number;
 		pattern_id: number;
 		leetcode_url?: string;
+		source_name?: string;
+		attribution?: string;
+		interview_frequency_score?: number | null;
+		learning_priority_score?: number | null;
 	}
 
 	interface Topic {
@@ -143,7 +147,17 @@
 						{#each filteredProblems as problem}
 							{@const diffBorder = problem.difficulty === 'Easy' ? 'border-l-emerald-400' : problem.difficulty === 'Medium' ? 'border-l-amber-400' : 'border-l-rose-400'}
 							<TableRow class="border-border hover:bg-accent transition-all">
-								<TableCell class="border-l-[3px] {diffBorder} font-bold text-foreground pl-6 py-4">{problem.title}</TableCell>
+								<TableCell class="border-l-[3px] {diffBorder} font-bold text-foreground pl-6 py-4">
+									<span>{problem.title}</span>
+									<div class="mt-1 flex flex-wrap gap-1.5">
+										{#if (problem.interview_frequency_score ?? 0) >= 7}
+											<span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">★ Interview Favorite</span>
+										{/if}
+										{#if problem.difficulty === 'Easy'}
+											<span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">Beginner Friendly</span>
+										{/if}
+									</div>
+								</TableCell>
 								<TableCell class="py-4">
 									<span class="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
 										{topics.find(t => t.id === problem.topic_id)?.name || 'General'}
@@ -161,6 +175,9 @@
 										</a>
 									{:else}
 										<span class="text-xs text-muted-foreground">—</span>
+									{/if}
+									{#if problem.source_name}
+										<div class="text-[10px] text-muted-foreground mt-0.5">via {problem.source_name}</div>
 									{/if}
 								</TableCell>
 								<TableCell class="pr-6 py-4 text-right">

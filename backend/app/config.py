@@ -90,6 +90,15 @@ class Settings(BaseSettings):
     GOOGLE_GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
+    # --- Problem import pipeline ---
+    # Max problems persisted per import run (daily job + manual trigger).
+    PROBLEM_IMPORT_DAILY_LIMIT: int = 10
+    # Whether the AI-generated original-practice source runs (needs a Gemini key).
+    PROBLEM_IMPORT_AI_ENABLED: bool = True
+    # Live LeetCode public-metadata source. OFF by default — automated access is
+    # legally grey even for metadata. Enable consciously; metadata-only when on.
+    PROBLEM_IMPORT_LEETCODE_ENABLED: bool = False
+
     # Pydantic Configuration
     # This instructs pydantic to load from backend/.env if it exists
     model_config = SettingsConfigDict(

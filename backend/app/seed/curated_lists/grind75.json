@@ -1,0 +1,26 @@
+{
+  "attribution": "Curated list: \"Grind 75\" style ordering (community interview list). Metadata only (title, difficulty, topic, link); problem statements are not reproduced — see the source link.",
+  "source_name": "grind75",
+  "problems": [
+    { "title": "Two Sum", "slug": "two-sum", "difficulty": "Easy", "topic": "arrays", "interview_frequency_score": 10 },
+    { "title": "Valid Parentheses", "slug": "valid-parentheses", "difficulty": "Easy", "topic": "stack", "interview_frequency_score": 8 },
+    { "title": "Merge Two Sorted Lists", "slug": "merge-two-sorted-lists", "difficulty": "Easy", "topic": "linked-list", "interview_frequency_score": 7 },
+    { "title": "Best Time to Buy and Sell Stock", "slug": "best-time-to-buy-and-sell-stock", "difficulty": "Easy", "topic": "arrays", "interview_frequency_score": 8 },
+    { "title": "Valid Palindrome", "slug": "valid-palindrome", "difficulty": "Easy", "topic": "two-pointers", "interview_frequency_score": 6 },
+    { "title": "Invert Binary Tree", "slug": "invert-binary-tree", "difficulty": "Easy", "topic": "trees", "interview_frequency_score": 6 },
+    { "title": "Valid Anagram", "slug": "valid-anagram", "difficulty": "Easy", "topic": "hashing", "interview_frequency_score": 6 },
+    { "title": "Binary Search", "slug": "binary-search", "difficulty": "Easy", "topic": "binary-search", "interview_frequency_score": 7 },
+    { "title": "Flood Fill", "slug": "flood-fill", "difficulty": "Easy", "topic": "graphs", "interview_frequency_score": 5 },
+    { "title": "Maximum Depth of Binary Tree", "slug": "maximum-depth-of-binary-tree", "difficulty": "Easy", "topic": "trees", "interview_frequency_score": 6 },
+    { "title": "Lowest Common Ancestor of a Binary Search Tree", "slug": "lowest-common-ancestor-of-a-binary-search-tree", "difficulty": "Medium", "topic": "bst", "interview_frequency_score": 6 },
+    { "title": "Balanced Binary Tree", "slug": "balanced-binary-tree", "difficulty": "Easy", "topic": "trees", "interview_frequency_score": 5 },
+    { "title": "Implement Queue using Stacks", "slug": "implement-queue-using-stacks", "difficulty": "Easy", "topic": "queue", "interview_frequency_score": 5 },
+    { "title": "First Bad Version", "slug": "first-bad-version", "difficulty": "Easy", "topic": "binary-search", "interview_frequency_score": 5 },
+    { "title": "Ransom Note", "slug": "ransom-note", "difficulty": "Easy", "topic": "hashing", "interview_frequency_score": 4 },
+    { "title": "Single Number", "slug": "single-number", "difficulty": "Easy", "topic": "bit-manipulation", "interview_frequency_score": 5 },
+    { "title": "Majority Element", "slug": "majority-element", "difficulty": "Easy", "topic": "arrays", "interview_frequency_score": 5 },
+    { "title": "Add Binary", "slug": "add-binary", "difficulty": "Easy", "topic": "math", "interview_frequency_score": 4 },
+    { "title": "Middle of the Linked List", "slug": "middle-of-the-linked-list", "difficulty": "Easy", "topic": "linked-list", "interview_frequency_score": 5 },
+    { "title": "Min Stack", "slug": "min-stack", "difficulty": "Medium", "topic": "stack", "interview_frequency_score": 6 }
+  ]
+}

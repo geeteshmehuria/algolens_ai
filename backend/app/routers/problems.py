@@ -49,8 +49,13 @@ def get_problems(
     """Retrieve list of DSA problems, with optional filters and pagination.
 
     Results are ordered by id and bounded by `limit` (max 200) so a single
-    request can never stream the whole table."""
-    statement = select(DSAProblem).where(DSAProblem.is_active == True)  # noqa: E712
+    request can never stream the whole table. Only published problems are
+    returned — imported problems awaiting admin review (`review_required`) or
+    `archived` ones are excluded from the public catalog."""
+    statement = select(DSAProblem).where(
+        DSAProblem.is_active == True,  # noqa: E712
+        DSAProblem.import_status == "published",
+    )
     if topic_id:
         statement = statement.where(DSAProblem.topic_id == topic_id)
     if pattern_id:

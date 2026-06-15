@@ -2,6 +2,7 @@
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any
 from sqlmodel import SQLModel, Field, Relationship, Column, JSON, UniqueConstraint
+from sqlalchemy import Index
 
 
 # --- USER MODULE ---
@@ -99,6 +100,19 @@ class DSAPattern(SQLModel, table=True):
 # --- PROBLEM MODULES ---
 class DSAProblem(SQLModel, table=True):
     __tablename__ = "dsa_problems"
+    # Idempotency for imports: at most one row per (source_name, leetcode_slug)
+    # when both are present. The partial WHERE keeps legacy/AI rows (which have
+    # no slug) out of the constraint. postgresql_where applies only on Postgres;
+    # SQLite (tests) ignores the dialect kwarg, so the runner also dedups in code.
+    __table_args__ = (
+        Index(
+            "uq_problem_source_slug",
+            "source_name",
+            "leetcode_slug",
+            unique=True,
+            postgresql_where="source_name IS NOT NULL AND leetcode_slug IS NOT NULL",
+        ),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     leetcode_slug: Optional[str] = Field(default=None, max_length=255)
@@ -112,7 +126,27 @@ class DSAProblem(SQLModel, table=True):
     examples: List[Dict[str, Any]] = Field(default=[], sa_column=Column(JSON))
     starter_code: Optional[str] = Field(default=None)
     is_active: bool = Field(default=True)
+
+    # --- Import / provenance (migration 0007) ---
+    # source_type: seed | curated_list | ai_generated | manual | leetcode
+    source_type: str = Field(default="seed", max_length=20)
+    source_name: Optional[str] = Field(default=None, max_length=60)
+    external_id: Optional[str] = Field(default=None, max_length=120)
+    # Generic external reference URL. leetcode_url is kept for back-compat and
+    # still populated for LeetCode-linked sources.
+    external_url: Optional[str] = Field(default=None)
+    # Normalized title used for fuzzy deduplication within a topic.
+    title_slug: Optional[str] = Field(default=None, index=True, max_length=255)
+    tags: List[str] = Field(default=[], sa_column=Column(JSON))
+    # import_status: review_required | published | archived. Only 'published'
+    # problems appear in the public catalog (see routers/problems.get_problems).
+    import_status: str = Field(default="published", index=True, max_length=20)
+    is_premium: bool = Field(default=False)
+    attribution: Optional[str] = Field(default=None, max_length=255)
+    interview_frequency_score: Optional[float] = Field(default=None)
+    learning_priority_score: Optional[float] = Field(default=None)
     created_on: datetime = Field(default_factory=datetime.utcnow)
+    updated_on: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
     topic: DSATopic = Relationship(back_populates="problems")
@@ -218,6 +252,31 @@ class AIGeneratedContent(SQLModel, table=True):
     content: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
     model: str = Field(default="", max_length=80)
     created_on: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ProblemImportRun(SQLModel, table=True):
+    """Audit log for one execution of the problem-import pipeline.
+
+    One row per run (daily job, manual admin trigger, or CLI), capturing what
+    source(s) ran and how many problems were imported / skipped / failed, plus
+    a truncated error log. Never deleted — it is the import history.
+    """
+
+    __tablename__ = "problem_import_runs"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    source: str = Field(max_length=120)  # comma-joined source names that ran
+    trigger: str = Field(max_length=20)  # 'daily' | 'manual' | 'cli'
+    status: str = Field(
+        default="running", max_length=20
+    )  # running | success | partial | failed
+    started_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = Field(default=None)
+    imported_count: int = Field(default=0)
+    skipped_duplicate_count: int = Field(default=0)
+    failed_count: int = Field(default=0)
+    error_log: Optional[str] = Field(default=None)
+    created_by: Optional[int] = Field(default=None, foreign_key="users.id")
 
 
 class AIHint(SQLModel, table=True):

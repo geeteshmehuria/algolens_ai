@@ -44,6 +44,7 @@
 		{ name: 'Revision', path: '/revision', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
 		{ name: 'Roadmap', path: '/roadmap', icon: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7' },
 		{ name: 'LeetCode Import', path: '/leetcode-import', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4', adminOnly: true },
+		{ name: 'Problem Import', path: '/admin/problem-import', icon: 'M19 14l-7 7m0 0l-7-7m7 7V3', adminOnly: true },
 		{ name: 'Settings', path: '/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }
 	];
 
@@ -130,9 +131,15 @@
 		>
 			<div class="flex items-center gap-3 mb-10 pl-2">
 				<div class="w-9 h-9 text-primary flex items-center justify-center bg-primary/10 rounded-lg">
-					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12.9 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="w-6 h-6">
+						<circle cx="12" cy="12" r="6.75"/>
+						<path stroke-linecap="round" d="M12 5.25 Q16.5 7.5 17.85 15.4"/>
+						<path stroke-linecap="round" d="M17.85 8.6 Q18.75 15 12 18.75"/>
+						<path stroke-linecap="round" d="M17.85 15.4 Q12 20 6.15 15.4"/>
+						<path stroke-linecap="round" d="M12 18.75 Q5.25 16.5 6.15 8.6"/>
+						<path stroke-linecap="round" d="M6.15 15.4 Q5.25 8.25 12 5.25"/>
+						<path stroke-linecap="round" d="M6.15 8.6 Q12 4.1 17.85 8.6"/>
+						<circle cx="12" cy="12" r="2.25" fill="currentColor" fill-opacity="0.25"/>
 					</svg>
 				</div>
 				<span class="font-title font-bold text-lg flex items-center gap-1 text-foreground">

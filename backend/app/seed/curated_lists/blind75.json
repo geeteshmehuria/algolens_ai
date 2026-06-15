@@ -1,0 +1,31 @@
+{
+  "attribution": "Curated list: \"Blind 75\" (community interview list). Metadata only (title, difficulty, topic, link); problem statements are not reproduced — see the source link.",
+  "source_name": "blind75",
+  "problems": [
+    { "title": "Two Sum", "slug": "two-sum", "difficulty": "Easy", "topic": "arrays", "interview_frequency_score": 10 },
+    { "title": "Best Time to Buy and Sell Stock", "slug": "best-time-to-buy-and-sell-stock", "difficulty": "Easy", "topic": "arrays", "interview_frequency_score": 8 },
+    { "title": "Contains Duplicate", "slug": "contains-duplicate", "difficulty": "Easy", "topic": "hashing", "interview_frequency_score": 7 },
+    { "title": "Product of Array Except Self", "slug": "product-of-array-except-self", "difficulty": "Medium", "topic": "arrays", "interview_frequency_score": 8 },
+    { "title": "Maximum Subarray", "slug": "maximum-subarray", "difficulty": "Medium", "topic": "dynamic-programming", "interview_frequency_score": 9 },
+    { "title": "Valid Anagram", "slug": "valid-anagram", "difficulty": "Easy", "topic": "hashing", "interview_frequency_score": 6 },
+    { "title": "Valid Parentheses", "slug": "valid-parentheses", "difficulty": "Easy", "topic": "stack", "interview_frequency_score": 8 },
+    { "title": "Merge Two Sorted Lists", "slug": "merge-two-sorted-lists", "difficulty": "Easy", "topic": "linked-list", "interview_frequency_score": 7 },
+    { "title": "Reverse Linked List", "slug": "reverse-linked-list", "difficulty": "Easy", "topic": "linked-list", "interview_frequency_score": 8 },
+    { "title": "Linked List Cycle", "slug": "linked-list-cycle", "difficulty": "Easy", "topic": "linked-list", "interview_frequency_score": 6 },
+    { "title": "Climbing Stairs", "slug": "climbing-stairs", "difficulty": "Easy", "topic": "dynamic-programming", "interview_frequency_score": 7 },
+    { "title": "Valid Palindrome", "slug": "valid-palindrome", "difficulty": "Easy", "topic": "two-pointers", "interview_frequency_score": 6 },
+    { "title": "Longest Substring Without Repeating Characters", "slug": "longest-substring-without-repeating-characters", "difficulty": "Medium", "topic": "sliding-window", "interview_frequency_score": 9 },
+    { "title": "3Sum", "slug": "3sum", "difficulty": "Medium", "topic": "two-pointers", "interview_frequency_score": 8 },
+    { "title": "Group Anagrams", "slug": "group-anagrams", "difficulty": "Medium", "topic": "hashing", "interview_frequency_score": 7 },
+    { "title": "Number of Islands", "slug": "number-of-islands", "difficulty": "Medium", "topic": "graphs", "interview_frequency_score": 9 },
+    { "title": "Invert Binary Tree", "slug": "invert-binary-tree", "difficulty": "Easy", "topic": "trees", "interview_frequency_score": 6 },
+    { "title": "Maximum Depth of Binary Tree", "slug": "maximum-depth-of-binary-tree", "difficulty": "Easy", "topic": "trees", "interview_frequency_score": 6 },
+    { "title": "Same Tree", "slug": "same-tree", "difficulty": "Easy", "topic": "trees", "interview_frequency_score": 5 },
+    { "title": "Binary Tree Level Order Traversal", "slug": "binary-tree-level-order-traversal", "difficulty": "Medium", "topic": "trees", "interview_frequency_score": 7 },
+    { "title": "Coin Change", "slug": "coin-change", "difficulty": "Medium", "topic": "dynamic-programming", "interview_frequency_score": 8 },
+    { "title": "Search in Rotated Sorted Array", "slug": "search-in-rotated-sorted-array", "difficulty": "Medium", "topic": "binary-search", "interview_frequency_score": 8 },
+    { "title": "Find Minimum in Rotated Sorted Array", "slug": "find-minimum-in-rotated-sorted-array", "difficulty": "Medium", "topic": "binary-search", "interview_frequency_score": 6 },
+    { "title": "Kth Smallest Element in a BST", "slug": "kth-smallest-element-in-a-bst", "difficulty": "Medium", "topic": "bst", "interview_frequency_score": 6 },
+    { "title": "Top K Frequent Elements", "slug": "top-k-frequent-elements", "difficulty": "Medium", "topic": "heap", "interview_frequency_score": 7 }
+  ]
+}
