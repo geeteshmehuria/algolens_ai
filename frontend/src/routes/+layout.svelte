@@ -5,10 +5,18 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
+	import ThemeToggle from '$lib/components/theme-toggle.svelte';
 	import { loadContents, clearCommonCache } from '$lib/stores/common';
+	import { initTheme } from '$lib/stores/theme';
 	import { getToken, getStoredUser, clearAuth, isAuthenticated as hasToken } from '$lib/auth';
 
 	let { children } = $props();
+
+	// Keep the theme store live (early init runs in app.html before paint; this
+	// syncs runtime state + reacts to OS changes while in "system" mode).
+	$effect(() => {
+		initTheme();
+	});
 
 	// Pages reachable without a session — rendered bare, never auth-redirected
 	const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
@@ -104,37 +112,38 @@
 {#if isPublic}
 	{@render children()}
 {:else if isAuthenticated}
-	<div class="flex min-h-screen bg-slate-50 text-slate-900">
+	<div class="flex min-h-screen app-bg text-slate-900">
 		<!-- Mobile overlay: dims content and closes the drawer on tap (lg+: hidden) -->
 		{#if sidebarOpen}
 			<button
 				type="button"
 				aria-label="Close menu"
-				class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[1px] lg:hidden"
+				class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-[1px] lg:hidden"
 				onclick={() => (sidebarOpen = false)}
 			></button>
 		{/if}
 
-		<!-- Sidebar: off-canvas drawer on mobile, fixed rail on lg+ -->
+		<!-- Sidebar: off-canvas drawer on mobile, fixed rail on lg+.
+		     Solid white in light; subtle glass in dark. -->
 		<aside
-			class="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col p-6 z-50 transition-transform duration-300 ease-out lg:translate-x-0 {sidebarOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'} lg:shadow-none"
+			class="fixed inset-y-0 left-0 w-64 bg-card dark:bg-card/70 dark:backdrop-blur-xl border-r border-border flex flex-col p-6 z-50 transition-transform duration-300 ease-out lg:translate-x-0 {sidebarOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'} lg:shadow-none"
 		>
 			<div class="flex items-center gap-3 mb-10 pl-2">
-				<div class="w-9 h-9 text-blue-600 flex items-center justify-center bg-blue-50 rounded-lg">
+				<div class="w-9 h-9 text-primary flex items-center justify-center bg-primary/10 rounded-lg">
 					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12.9 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
 						<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 					</svg>
 				</div>
-				<span class="font-title font-bold text-lg flex items-center gap-1 text-slate-900">
-					AlgoLens <span class="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide">AI</span>
+				<span class="font-title font-bold text-lg flex items-center gap-1 text-foreground">
+					AlgoLens <span class="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide">AI</span>
 				</span>
 			</div>
 
 			<nav class="flex flex-col gap-1.5 flex-1">
 				{#each visibleMenuItems as item}
 					{@const isActive = page.url.pathname === item.path || page.url.pathname.startsWith(item.path + '/')}
-					<a href={item.path} class="flex items-center gap-3 px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-200 {isActive ? 'text-blue-600 bg-blue-50/75 font-semibold' : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'}">
+					<a href={item.path} class="flex items-center gap-3 px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-200 {isActive ? 'text-primary bg-primary/10 font-semibold' : 'text-muted-foreground hover:text-primary hover:bg-muted'}">
 						<svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d={item.icon} />
 						</svg>
@@ -148,19 +157,23 @@
 				{/each}
 			</nav>
 
-			<div class="border-t border-slate-200 pt-5 flex flex-col gap-4">
+			<div class="border-t border-border pt-5 flex flex-col gap-4">
+				<div class="flex items-center justify-between gap-2">
+					<span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Theme</span>
+					<ThemeToggle />
+				</div>
 				{#if user}
 					<div class="flex items-center gap-3">
-						<div class="w-9 h-9 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold border border-blue-100">
+						<div class="w-9 h-9 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold border border-primary/20">
 							{user.full_name ? user.full_name[0].toUpperCase() : 'U'}
 						</div>
 						<div class="flex flex-col overflow-hidden">
-							<span class="text-[13px] font-semibold text-slate-800 truncate">{user.full_name || 'User'}</span>
-							<span class="text-[11px] text-slate-400 truncate">{user.email || 'user@algolens.ai'}</span>
+							<span class="text-[13px] font-semibold text-foreground truncate">{user.full_name || 'User'}</span>
+							<span class="text-[11px] text-muted-foreground truncate">{user.email || 'user@algolens.ai'}</span>
 						</div>
 					</div>
 				{/if}
-				<Button variant="outline" class="w-full text-slate-600 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 text-xs py-2 h-9" onclick={logout}>
+				<Button variant="outline" class="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/40 text-xs py-2 h-9" onclick={logout}>
 					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="w-4 h-4 mr-2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
 					</svg>
@@ -171,19 +184,19 @@
 
 		<!-- Main content area -->
 		<div class="flex-1 lg:ml-64 flex flex-col min-h-screen">
-			<header class="h-16 bg-white/90 backdrop-blur border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30">
+			<header class="h-16 bg-card/90 dark:bg-card/65 backdrop-blur border-b border-border flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30">
 				<div class="flex items-center gap-3 min-w-0">
 					<button
 						type="button"
 						aria-label="Open menu"
-						class="lg:hidden -ml-1 inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+						class="lg:hidden -ml-1 inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
 						onclick={() => (sidebarOpen = true)}
 					>
 						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="w-5 h-5">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
 						</svg>
 					</button>
-					<h1 class="font-title text-base font-bold text-slate-900 truncate">
+					<h1 class="font-title text-base font-bold text-foreground truncate">
 						{menuItems.find(item => page.url.pathname.startsWith(item.path))?.name || 'AlgoLens AI'}
 					</h1>
 				</div>
@@ -209,7 +222,7 @@
 {:else}
 	<!-- Logged-out on a protected route: neutral splash while redirecting to
 	     /login. Never render protected content here (prevents the dashboard flash). -->
-	<div class="flex items-center justify-center h-screen bg-slate-50">
-		<div class="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-blue-600"></div>
+	<div class="flex items-center justify-center h-screen app-bg">
+		<div class="animate-spin rounded-full h-10 w-10 border-4 border-muted border-t-primary"></div>
 	</div>
 {/if}

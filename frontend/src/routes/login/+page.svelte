@@ -100,7 +100,7 @@
 	</aside>
 
 	<!-- Form panel -->
-	<div class="flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/50 p-4">
+	<div class="flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-background dark:to-slate-900 p-4">
 	<Card class="w-full max-w-[440px] shadow-xl border border-slate-200 bg-white">
 		<CardHeader class="text-center pt-8 pb-4">
 			<div class="inline-flex w-12 h-12 bg-blue-50 text-blue-600 rounded-xl items-center justify-center mb-3 mx-auto lg:hidden">

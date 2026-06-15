@@ -29,7 +29,7 @@
 	}
 </script>
 
-<div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/50 p-4">
+<div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-background dark:to-slate-900 p-4">
 	<Card class="w-full max-w-[440px] shadow-xl border border-slate-200 bg-white">
 		<CardHeader class="text-center pt-8 pb-4">
 			<CardTitle class="text-2xl font-extrabold tracking-tight text-slate-900">

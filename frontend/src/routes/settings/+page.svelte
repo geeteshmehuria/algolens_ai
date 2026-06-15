@@ -7,6 +7,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
+	import ThemeToggle from '$lib/components/theme-toggle.svelte';
 
 	let fullName = $state('');
 	let email = $state('');
@@ -63,6 +64,16 @@
 				Manage your AlgoLens AI profile preferences and sync integrations.
 			</CardDescription>
 		</CardHeader>
+	</Card>
+
+	<Card class="border-slate-200 bg-white p-6">
+		<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div>
+				<h2 class="text-sm font-bold text-slate-900">Appearance</h2>
+				<p class="text-xs text-slate-500 mt-0.5">Choose Light, Dark, or follow your System setting.</p>
+			</div>
+			<ThemeToggle showLabels />
+		</div>
 	</Card>
 
 	<Card class="border-slate-200 bg-white p-8">

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` utilities respond to a `.dark` ancestor
+   (set on <html> by the early init script in app.html), not the OS media
+   query. This is what makes the theme toggle work and lets the shadcn
+   primitives' built-in `dark:` classes follow the selected theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Custom utility definitions for shadcn-svelte (v4 style theme) */
 @theme {
   --color-border: hsl(var(--border));
@@ -91,28 +97,45 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 221.2 83.2% 53.3%;
   --radius: 0.5rem;
+
+  /* Glass surface tokens — used by .glass / .glass-strong utilities. */
+  --glass-bg: 255 255 255 / 0.72;
+  --glass-bg-strong: 255 255 255 / 0.9;
+  --glass-border: 148 163 184 / 0.22;
+  --glass-shadow: 0 8px 30px -12px rgb(15 23 42 / 0.18);
 }
 
+/* ---- Premium dark theme ----
+   Deep navy/slate (not pure black), soft brand-blue highlights, readable text.
+   Suggested palette mapped to shadcn HSL token slots. */
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
+  --background: 222 47% 8%; /* deep navy, ~between slate-900 and slate-950 */
+  --foreground: 210 40% 98%; /* #F8FAFC */
+  --card: 222 44% 12%; /* surface strong */
   --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
+  --popover: 222 44% 13%;
   --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
+  --primary: 217 91% 60%; /* #3B82F6 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 217 33% 18%;
   --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 24% 72%; /* readable secondary text (~#CBD5E1) */
+  --accent: 217 33% 20%;
   --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 75% 60%; /* #EF4444 */
   --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 48%;
+  --border: 216 25% 26%;
+  --input: 216 25% 26%;
+  --ring: 217 91% 60%;
+
+  /* Glass tokens tuned for the dark surface. */
+  --glass-bg: 15 23 42 / 0.62;
+  --glass-bg-strong: 17 24 39 / 0.85;
+  --glass-border: 148 163 184 / 0.16;
+  --glass-shadow: 0 10px 34px -14px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
 }
 
 * {
@@ -172,6 +195,15 @@ body {
 /* ---- Reusable, theme-driven helper utilities ----
    Keep page markup clean: use these instead of repeating long class lists. */
 
+/* App page background: keeps the light slate-50 that makes white cards pop,
+   switches to the deep-navy token in dark. */
+.app-bg {
+  background-color: hsl(210 40% 98%);
+}
+.dark .app-bg {
+  background-color: hsl(var(--background));
+}
+
 /* Subtle hover lift for interactive cards */
 .lift {
   transition:
@@ -190,6 +222,278 @@ body {
     hsl(221.2 83.2% 53.3% / 0.06) 0%,
     hsl(199 89% 48% / 0.05) 100%
   );
+}
+.dark .surface-hero {
+  background-image: linear-gradient(
+    135deg,
+    hsl(217 91% 60% / 0.16) 0%,
+    hsl(199 89% 55% / 0.08) 100%
+  );
+}
+
+/* ---- Glass surfaces ----
+   Subtle frosted panels for the header / sidebar / hero. Backed by theme
+   tokens so light and dark each get the right tint. Kept off dense reading
+   content (notes/forms/code) where opacity would hurt contrast. */
+.glass {
+  background-color: rgb(var(--glass-bg));
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgb(var(--glass-border));
+  box-shadow: var(--glass-shadow);
+}
+.glass-strong {
+  background-color: rgb(var(--glass-bg-strong));
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgb(var(--glass-border));
+  box-shadow: var(--glass-shadow);
+}
+/* Soft hover glow for premium interactive cards. */
+.lift:hover {
+  box-shadow:
+    0 12px 30px -16px hsl(221 83% 53% / 0.28),
+    0 6px 14px -10px rgb(15 23 42 / 0.12);
+}
+.dark .lift:hover {
+  box-shadow:
+    0 0 0 1px hsl(217 91% 60% / 0.18),
+    0 14px 36px -18px hsl(217 91% 60% / 0.35);
+}
+
+/* Smooth, fast theme switch on the surfaces that change color. Cheap (only the
+   color-ish properties) and disabled under prefers-reduced-motion below. */
+body,
+aside,
+header,
+main,
+.glass,
+.glass-strong,
+[data-slot="card"],
+input,
+textarea,
+select {
+  transition:
+    background-color 0.25s var(--ease-standard),
+    border-color 0.25s var(--ease-standard),
+    color 0.25s var(--ease-standard);
+}
+
+/* Dark scrollbars + selection. */
+.dark,
+.dark * {
+  scrollbar-color: hsl(215 20% 55% / 0.4) transparent;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background-color: hsl(215 20% 60% / 0.28);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(215 20% 65% / 0.45);
+}
+.dark ::selection {
+  background-color: hsl(217 91% 60% / 0.3);
+  color: hsl(var(--foreground));
+}
+
+/* Skeleton shimmer + soft AI pulse (used by loading/generation states). */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 1.8s var(--ease-standard) infinite;
+}
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-dropdown {
+  animation: dropdown-in 0.14s var(--ease-standard) both;
+}
+
+/* =====================================================================
+   Dark compatibility layer
+   ---------------------------------------------------------------------
+   The custom pages/components were authored with hard-coded light slate
+   utilities (bg-white, text-slate-*, border-slate-*). Rather than scatter
+   `dark:` variants across 30+ files, the structural neutrals + the common
+   tinted accents are remapped here in ONE place under `.dark`. These rules
+   are intentionally un-layered so they win over Tailwind's utilities, and
+   each interactive state (hover/focus) is remapped too so feedback survives.
+   Pure-dark utilities used for code blocks (slate-900/950, text-slate-100/200)
+   are deliberately left untouched.
+   ===================================================================== */
+
+/* Surfaces */
+.dark .bg-white {
+  background-color: hsl(var(--card));
+}
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-slate-50\/30,
+.dark .bg-slate-50\/50 {
+  background-color: hsl(217 33% 15%);
+}
+.dark .hover\:bg-white:hover,
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover,
+.dark .focus\:bg-white:focus {
+  background-color: hsl(217 33% 19%);
+}
+.dark .hover\:bg-slate-200:hover {
+  background-color: hsl(217 33% 24%);
+}
+
+/* Primary / heading text */
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  color: hsl(var(--foreground));
+}
+.dark .hover\:text-slate-900:hover,
+.dark .hover\:text-slate-800:hover,
+.dark .hover\:text-slate-700:hover {
+  color: hsl(var(--foreground));
+}
+/* Secondary / muted text */
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: hsl(215 24% 72%);
+}
+.dark .text-slate-400 {
+  color: hsl(215 18% 60%);
+}
+.dark .hover\:text-slate-600:hover {
+  color: hsl(215 24% 78%);
+}
+
+/* Borders */
+.dark .border-slate-200,
+.dark .border-slate-100,
+.dark .border-slate-300,
+.dark .border-slate-200\/50,
+.dark .border-slate-200\/70 {
+  border-color: hsl(var(--border));
+}
+.dark .hover\:border-slate-200:hover,
+.dark .hover\:border-slate-300:hover {
+  border-color: hsl(216 25% 34%);
+}
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(var(--border));
+}
+
+/* Common tinted accents (badges/pills) — keep meaning, lift readability.
+   Soften the 50/100 tint backgrounds and brighten the 600/700/800 text. */
+.dark .bg-blue-50,
+.dark .bg-blue-50\/75,
+.dark .bg-blue-50\/30,
+.dark .bg-blue-50\/50 {
+  background-color: hsl(217 91% 60% / 0.16);
+}
+.dark .bg-blue-100 {
+  background-color: hsl(217 91% 60% / 0.22);
+}
+.dark .text-blue-700,
+.dark .text-blue-800,
+.dark .text-blue-600 {
+  color: hsl(213 94% 78%);
+}
+.dark .border-blue-100,
+.dark .border-blue-200 {
+  border-color: hsl(217 91% 60% / 0.3);
+}
+
+.dark .bg-emerald-50,
+.dark .bg-green-50 {
+  background-color: hsl(160 84% 39% / 0.16);
+}
+.dark .bg-emerald-100 {
+  background-color: hsl(160 84% 39% / 0.22);
+}
+.dark .text-emerald-700,
+.dark .text-emerald-600,
+.dark .text-green-700 {
+  color: hsl(152 76% 64%);
+}
+.dark .border-emerald-100,
+.dark .border-emerald-200 {
+  border-color: hsl(160 84% 39% / 0.3);
+}
+
+.dark .bg-amber-50,
+.dark .bg-yellow-50 {
+  background-color: hsl(38 92% 50% / 0.16);
+}
+.dark .bg-amber-100 {
+  background-color: hsl(38 92% 50% / 0.22);
+}
+.dark .text-amber-700,
+.dark .text-amber-800,
+.dark .text-amber-600 {
+  color: hsl(43 96% 70%);
+}
+.dark .border-amber-100,
+.dark .border-amber-200,
+.dark .border-amber-200\/50 {
+  border-color: hsl(38 92% 50% / 0.3);
+}
+
+.dark .bg-rose-50,
+.dark .bg-red-50 {
+  background-color: hsl(350 89% 60% / 0.16);
+}
+.dark .text-rose-700,
+.dark .text-rose-600,
+.dark .text-red-700,
+.dark .text-red-600 {
+  color: hsl(350 96% 78%);
+}
+.dark .border-rose-200,
+.dark .border-red-200 {
+  border-color: hsl(350 89% 60% / 0.3);
+}
+
+.dark .bg-violet-50,
+.dark .bg-purple-50 {
+  background-color: hsl(258 90% 66% / 0.16);
+}
+.dark .text-violet-700,
+.dark .text-purple-700 {
+  color: hsl(255 92% 82%);
+}
+
+.dark .bg-cyan-50 {
+  background-color: hsl(189 94% 43% / 0.16);
+}
+.dark .text-cyan-700,
+.dark .text-cyan-600 {
+  color: hsl(187 92% 69%);
+}
+
+.dark .bg-indigo-50 {
+  background-color: hsl(239 84% 67% / 0.16);
+}
+.dark .text-indigo-700,
+.dark .text-indigo-600 {
+  color: hsl(232 94% 82%);
 }
 
 /* Respect users who prefer reduced motion: disable transitions/animations
