@@ -84,8 +84,24 @@ def build_master_data(session: Session, keys: Set[str]) -> MasterDataResponse:
     resp = MasterDataResponse()
 
     if "topics" in keys:
-        topics = session.exec(select(DSATopic).order_by(DSATopic.name)).all()
-        resp.topics = [TopicOption(id=t.id, name=t.name) for t in topics]
+        topics = session.exec(
+            select(DSATopic).order_by(
+                DSATopic.learning_order.is_(None),
+                DSATopic.learning_order,
+                DSATopic.name,
+            )
+        ).all()
+        resp.topics = [
+            TopicOption(
+                id=t.id,
+                name=t.name,
+                slug=t.slug,
+                category=t.category,
+                difficulty=t.difficulty,
+                learning_order=t.learning_order,
+            )
+            for t in topics
+        ]
 
     if "patterns" in keys:
         patterns = session.exec(select(DSAPattern).order_by(DSAPattern.name)).all()

@@ -624,8 +624,16 @@ def get_user_topics_list(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Retrieve all topics + note availability + user state + last quiz score."""
-    topics = session.exec(select(DSATopic)).all()
+    """Retrieve all topics + note availability + user state + last quiz score.
+
+    Ordered by curriculum learning_order so the client can group by category."""
+    topics = session.exec(
+        select(DSATopic).order_by(
+            DSATopic.learning_order.is_(None),
+            DSATopic.learning_order,
+            DSATopic.name,
+        )
+    ).all()
 
     # Get states
     states = session.exec(
@@ -671,6 +679,11 @@ def get_user_topics_list(
                 "id": t.id,
                 "name": t.name,
                 "description": t.description,
+                "slug": t.slug,
+                "category": t.category,
+                "difficulty": t.difficulty,
+                "learning_order": t.learning_order,
+                "estimated_time_minutes": t.estimated_time_minutes,
                 "has_published_note": t.id in published_set,
                 "state": {
                     "status": state.status if state else "reading",

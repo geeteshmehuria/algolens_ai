@@ -61,7 +61,21 @@ class DSATopic(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(unique=True, index=True, max_length=100)
     description: Optional[str] = Field(default=None)
+    # Curriculum metadata (seeded by app/seed/curriculum.py). slug is the stable
+    # idempotency key for the seed upsert; category groups subtopics for the UI;
+    # learning_order drives the global study sequence.
+    slug: Optional[str] = Field(default=None, unique=True, index=True, max_length=120)
+    category: Optional[str] = Field(default=None, max_length=80)
+    difficulty: Optional[str] = Field(
+        default=None, max_length=20
+    )  # beginner | intermediate | advanced
+    learning_order: Optional[int] = Field(default=None, index=True)
+    estimated_time_minutes: Optional[int] = Field(default=None)
+    prerequisites: List[str] = Field(default=[], sa_column=Column(JSON))
+    tags: List[str] = Field(default=[], sa_column=Column(JSON))
+    is_active: bool = Field(default=True)
     created_on: datetime = Field(default_factory=datetime.utcnow)
+    updated_on: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
     patterns: List["DSAPattern"] = Relationship(back_populates="topic")

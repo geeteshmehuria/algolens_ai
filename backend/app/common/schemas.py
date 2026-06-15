@@ -33,6 +33,10 @@ class ContentsResponse(BaseModel):
 class TopicOption(BaseModel):
     id: int
     name: str
+    slug: Optional[str] = None
+    category: Optional[str] = None
+    difficulty: Optional[str] = None
+    learning_order: Optional[int] = None
 
 
 class PatternOption(BaseModel):

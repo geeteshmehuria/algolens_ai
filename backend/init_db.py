@@ -9,6 +9,7 @@ from sqlmodel import SQLModel, Session, select
 from app.database import engine
 from app.config import settings
 from app.models import DSATopic, DSAPattern, DSAProblem, Role
+from app.seed.curriculum import seed_curriculum
 
 # Import models so SQLModel metadata is aware of them
 
@@ -21,6 +22,16 @@ def seed_database():
             if not session.exec(select(Role).where(Role.name == role_name)).first():
                 session.add(Role(name=role_name))
         session.commit()
+
+        # 0b. Seed the full DSA curriculum (idempotent, slug-keyed upsert).
+        # Runs before the legacy sample topics/problems below so those reconcile
+        # onto the enriched rows by name rather than creating duplicates.
+        curr_stats = seed_curriculum(session)
+        print(
+            f"  Curriculum: created={curr_stats['created']} "
+            f"updated={curr_stats['updated']} "
+            f"patterns={curr_stats['patterns_created']}"
+        )
         # 1. Seed Topics
         topics_data = [
             (
