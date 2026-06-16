@@ -54,31 +54,33 @@ Preparing for DSA interviews is fragmented. Learners bounce between video course
 
 **Login**
 
-![Login](docs/screenshots/login.png)
+<img width="1920" height="1080" alt="login" src="https://github.com/user-attachments/assets/1ae1911e-a264-4fec-90fb-96ec88e05abc" />
 
 **Dashboard** — streak, core counters, weekly activity, and a 12-week contribution heatmap
 
-![Dashboard](docs/screenshots/dashboard.png)
+<img width="1920" height="1080" alt="dashboard" src="https://github.com/user-attachments/assets/8db64f7e-12a6-4510-b656-1597dc9c777a" />
+
 
 **Practice Problems** — filter by topic/difficulty, with curated-list provenance (Blind 75 / Grind 75)
 
-![Practice Problems](docs/screenshots/problems.png)
+<img width="1920" height="1080" alt="problems" src="https://github.com/user-attachments/assets/5c91bcbe-4316-479b-a993-e5d9db07bc4e" />
+
 
 **Topic Notes** — AI-generated study notes across DSA categories, with per-topic progress and quizzes
 
-![Topic Notes](docs/screenshots/topic-notes.png)
+<img width="1920" height="1080" alt="topic-notes" src="https://github.com/user-attachments/assets/38a37db7-927c-4c61-92e0-8edf8da343d4" />
 
 **Revision Hub** — spaced-repetition queue driven by your attempts
 
-![Revision Hub](docs/screenshots/revision.png)
+<img width="1920" height="1080" alt="revision" src="https://github.com/user-attachments/assets/a28ce388-1377-46c1-bea3-a9575122e5be" />
 
 **DSA Roadmap** — a structured, AI-generated learning plan
 
-![DSA Roadmap](docs/screenshots/roadmap.png)
+<img width="1920" height="1080" alt="roadmap" src="https://github.com/user-attachments/assets/210d31d6-c584-499d-a4ef-ff1621d41abb" />
 
 **Problem Import (Admin)** — topic-coverage gaps, run import, and a review/publish queue
 
-![Problem Import](docs/screenshots/problem-import.png)
+<img width="1920" height="1080" alt="problem-import" src="https://github.com/user-attachments/assets/a27709dc-80ae-4acc-b195-cf9da7d50489" />
 
 ---
 
