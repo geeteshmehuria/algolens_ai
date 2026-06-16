@@ -48,18 +48,8 @@ VITE_API_URL = https://<your-render-service>.onrender.com
 
 ## 3. Deploy order
 
-### A. Push the deploy-ready code (run on your machine, in D:\Projects)
-```
-del .git\index.lock                      # if it exists
-del _tmp_21_*  frontend\_tmp_21_*         # remove leftover temp files
-git add backend/app/main.py backend/.python-version render.yaml ^
-        frontend/package.json frontend/pnpm-lock.yaml frontend/vite.config.ts ^
-        frontend/svelte.config.js frontend/vercel.json frontend/src/routes/+layout.ts ^
-        frontend/.env.example .gitignore DEPLOYMENT.md
-git commit -m "Add deployment config: static SPA adapter, /health, render blueprint"
-git push origin dev
-```
-(Deploy from whichever branch you push — `dev` is fine. Select it in both dashboards.)
+### A. Push the deploy-ready code
+Make sure `render.yaml`, `frontend/vercel.json`, and any other deploy-config changes are committed and pushed to the branch you'll connect in Render/Vercel (`dev` is fine — select it in both dashboards).
 
 ### B. Backend on Render
 1. New → **Blueprint** → pick the repo → Render reads `render.yaml`.
