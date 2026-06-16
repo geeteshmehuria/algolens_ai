@@ -413,20 +413,6 @@ Build/run commands, env-var setup, deploy order, and a post-deploy checklist are
 
 ---
 
-## Interview Talking Points
-
-- **Not a CRUD app:** it orchestrates an external LLM safely (validation, retries, honest failure), caches results in a relational schema, and runs a multi-stage import pipeline behind an admin review gate.
-- **AI is integrated defensively:** one hardened call path, JSON-mode + bounded retries, and a strict rule never to return placeholder content on failure.
-- **Generated content is persisted and reused:** explanations/animations are unique per problem and shared across users; hints are cached per `(user, problem, level)` — re-spending tokens is an explicit user action.
-- **Progress tracking is real, not faked:** streaks and a spaced-repetition queue derive from actual attempts, with one `learning_summary()` source of truth.
-- **Frontend ↔ backend contract:** a single API client attaches the JWT and dedupes GETs; a static SPA with a synchronous client-side auth gate (SSR off) avoids any flash of protected content.
-- **Schema decisions:** integer PKs, `CHECK`-constrained statuses, JSONB for documents, indexed hot-path FKs, and migrations kept in lockstep with models.
-- **Optimizations:** DB-level AI caching, request dedup, and a consolidated bootstrap endpoint.
-- **What I'd improve next:** a real sandboxed code runner and JWT revocation (see Roadmap).
-- **A principled trade-off I can defend:** AlgoLens AI imports only public metadata + original AI content — never third-party problem statements or premium data.
-
----
-
 ## Author
 
 **Built by Geetesh Maihuria**
