@@ -15,6 +15,19 @@ Development happens on Windows; the backend venv lives at `backend\.venv`.
 
 ### Backend (run from `backend/`)
 
+Using `uv` (recommended):
+```powershell
+uv run uvicorn app.main:app --reload --port 8000
+uv run pytest tests -q
+uv run pytest tests/test_progress_service.py::test_streak_broken_by_gap
+uv run alembic upgrade head
+uv run alembic revision -m "description"
+uv run init_db.py
+uv run make_admin.py user@email.com
+uv run -m app.jobs.daily_import
+```
+
+Using standard `venv`:
 ```powershell
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000   # dev server (frontend expects :8000)
 .venv\Scripts\python.exe -m pytest tests -q                              # all tests
@@ -30,9 +43,9 @@ Development happens on Windows; the backend venv lives at `backend\.venv`.
 
 ```powershell
 pnpm install
-pnpm dev          # dev server on :5173
-pnpm check        # svelte-check (type checking) — run this after frontend changes
-pnpm test:e2e     # all Playwright specs; requires backend running on :8000, starts :5173 itself
+pnpm run dev          # dev server on :5173
+pnpm check            # svelte-check (type checking) — run this after frontend changes
+pnpm test:e2e         # all Playwright specs; requires backend running on :8000, starts :5173 itself
 pnpm exec playwright test e2e/site-smoke.spec.ts   # single spec
 ```
 
