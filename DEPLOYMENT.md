@@ -1,9 +1,23 @@
 # AlgoLens AI — Deployment Guide (free tier)
 
-Architecture: **Vercel** (static SvelteKit SPA) → **Render** (FastAPI backend) → **Aiven** (PostgreSQL, already deployed).
+Architecture: **Vercel** (static SvelteKit SPA) → **Render** (FastAPI backend) → **Neon** (PostgreSQL, serverless).
 
 All three are usable with **no credit card**. The only trade-off is Render's free
 backend sleeps after 15 min idle and cold-starts in ~30–60s on the next request.
+
+---
+
+## 0. Set up the database (Neon)
+
+> Do this first — you need the connection string before deploying the backend.
+
+1. Sign up at https://neon.tech (free, no card needed).
+2. Create a new project → choose a region closest to your backend (e.g. `aws-ap-southeast-1` for Singapore).
+3. Neon creates a default database. Go to **Dashboard → Connection Details** and copy the connection string — it looks like:
+   ```
+   postgresql://user:password@ep-xxx-xxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+   ```
+4. Keep this string handy — it goes in as `DATABASE_URL` everywhere below.
 
 ---
 
@@ -11,10 +25,10 @@ backend sleeps after 15 min idle and cold-starts in ~30–60s on the next reques
 
 | Service | URL | Card needed | Purpose |
 |---|---|---|---|
+| Neon | https://neon.tech | No | PostgreSQL database |
 | Render | https://render.com | No | FastAPI backend |
 | Vercel | https://vercel.com | No | Static frontend |
 | GitHub | (existing repo) | No | Source + auto-deploy |
-| Aiven | (existing) | No | PostgreSQL (keep) |
 
 Sign in to Render and Vercel **with GitHub** so they can read the repo and auto-deploy.
 
@@ -24,7 +38,7 @@ Sign in to Render and Vercel **with GitHub** so they can read the repo and auto-
 
 ### Backend (set in Render dashboard — never commit these)
 ```
-DATABASE_URL          = <Aiven URL>?sslmode=require      # secret
+DATABASE_URL          = <Neon connection string>          # secret — from step 0
 JWT_SECRET            = <48+ char random string>          # secret
 ENVIRONMENT           = production
 FRONTEND_URL          = https://<your-app>.vercel.app
@@ -33,7 +47,7 @@ GOOGLE_GEMINI_API_KEY = <key>            # optional (AI = 503 without it)
 GEMINI_MODEL          = gemini-2.5-flash
 RATE_LIMIT_ENABLED    = true
 ```
-Generate the secret:
+Generate the JWT secret:
 ```
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
@@ -57,7 +71,7 @@ Make sure `render.yaml`, `frontend/vercel.json`, and any other deploy-config cha
 2. Fill the secret env vars from section 2 (leave FRONTEND_URL as a placeholder for now).
 3. Deploy. When live, test:
    - `https://<service>.onrender.com/health`  → `{"status":"ok"}`
-   - `https://<service>.onrender.com/api/topics` → JSON list (proves DB connection).
+   - `https://<service>.onrender.com/api/topics` → JSON list (proves DB connected).
 4. Copy the backend URL.
 
 ### C. Frontend on Vercel
@@ -84,7 +98,7 @@ Make sure `render.yaml`, `frontend/vercel.json`, and any other deploy-config cha
 ## 5. Risks / things to know
 - **Cold start:** free Render backend sleeps after 15 min idle (~30–60s first request).
   Before a demo, open `/health` ~1 min ahead to warm it.
-- **DB latency:** put the Render region closest to your Aiven region (`render.yaml` → `region`).
-- **SSL:** Aiven requires `?sslmode=require` in `DATABASE_URL`.
+- **DB latency:** choose the Neon region closest to your Render region (`render.yaml` → `region`).
+- **SSL:** Neon requires `?sslmode=require` in `DATABASE_URL` — the connection string from the Neon dashboard already includes it.
 - **JWT_SECRET:** the app refuses to boot in production with the default secret.
 - **No accidental billing:** none of the chosen tiers require a card.

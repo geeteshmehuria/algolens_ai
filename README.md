@@ -7,7 +7,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-Frontend-3178C6?logo=typescript&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Aiven-4169E1?logo=postgresql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Google_Gemini-AI-8E75B2?logo=googlegemini&logoColor=white)
 
 **Repository:** https://github.com/geeteshmehuria/algolens_ai
@@ -37,7 +37,7 @@ Preparing for DSA interviews is fragmented. Learners bounce between video course
 - 📈 **Progress tracking** — solved/attempted counters, streaks, a contribution heatmap, and topic proficiency.
 - 🔐 **Secure auth** — JWT + bcrypt, full password-reset-by-email flow, role-based admin access, rate limiting, and a production config guard.
 - 🎨 **Forest-green theme with first-class dark mode** built on Tailwind 4 + shadcn-svelte components.
-- ⚙️ **Production deployment config** for Vercel + Render + Aiven (free tier), including health checks and SPA routing.
+- ⚙️ **Production deployment config** for Vercel + Render + Neon (free tier), including health checks and SPA routing.
 
 > **Honesty note:** AlgoLens AI does **not** execute user-submitted code (there is no sandbox). The "Run tests" feature returns sample inputs/expected outputs for manual checking — it never fabricates pass/fail results. This is a deliberate design choice, documented below.
 
@@ -101,7 +101,7 @@ Preparing for DSA interviews is fragmented. Learners bounce between video course
 - **google-genai** for Google Gemini integration
 
 ### Database
-- **PostgreSQL** — local for dev, **Aiven** managed Postgres for the shared cloud dev/prod database
+- **PostgreSQL** — local for dev, **Neon** serverless Postgres for the cloud dev/prod database
 - JSONB for document-shaped content, `VARCHAR + CHECK` for statuses (no native PG enums), integer PKs
 
 ### Tooling & Quality
@@ -161,7 +161,7 @@ A pipeline (`problem_import/`) that runs *gather → rank → dedup → map-topi
 flowchart TD
     User[User Browser] --> Frontend[SvelteKit SPA<br/>Svelte 5 + Tailwind 4]
     Frontend -->|REST /api, JWT bearer| API[FastAPI Backend]
-    API --> DB[(PostgreSQL / Aiven)]
+    API --> DB[(PostgreSQL / Neon)]
     API -->|google-genai| AI[Google Gemini API]
     Cron[External Scheduler] -->|daily_import job| API
 ```
@@ -199,7 +199,7 @@ algolens_ai/
 │   ├── e2e/                # Playwright specs
 │   └── package.json
 ├── render.yaml             # Render blueprint (backend)
-├── DEPLOYMENT.md           # Vercel + Render + Aiven deploy guide
+├── DEPLOYMENT.md           # Vercel + Render + Neon deploy guide
 └── README.md
 ```
 
@@ -258,7 +258,7 @@ If AI is unavailable, the API returns an honest **503/502** — never fake conte
 ### Prerequisites
 - **Node.js** + **pnpm**
 - **Python 3.13** (or **uv** package manager)
-- **PostgreSQL** (local) or an Aiven Postgres URL
+- **PostgreSQL** (local) or a Neon Postgres URL (https://neon.tech, free, no card)
 
 ### Backend (run from `backend/`)
 

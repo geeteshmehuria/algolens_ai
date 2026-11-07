@@ -3,7 +3,7 @@
 **Architecture:**
 - **Cloud Run** (FastAPI backend, Docker) → free tier: 2M req/month, 360k GB-sec/month
 - **Firebase Hosting** (static SvelteKit SPA) → free tier: 10 GB bandwidth/month
-- **Aiven** (PostgreSQL, existing) → keep as-is
+- **Neon** (PostgreSQL, serverless) → free at neon.tech, no card needed
 
 No credit card required for the free tiers above.
 
@@ -62,7 +62,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 Create each secret — replace the value inside the quotes before running:
 
 ```bash
-echo -n "postgresql://user:pass@host/db?sslmode=require" | gcloud secrets create DATABASE_URL --data-file=-
+echo -n "postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require" | gcloud secrets create DATABASE_URL --data-file=-
 ```
 
 ```bash
