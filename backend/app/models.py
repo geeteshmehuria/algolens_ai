@@ -476,3 +476,25 @@ class AINoteGenerationLog(SQLModel, table=True):
     output_tokens: Optional[int] = Field(default=None)
     latency_ms: Optional[int] = Field(default=None)
     created_on: datetime = Field(default_factory=datetime.utcnow)
+
+
+class TLog(SQLModel, table=True):
+    """Failed requests and background-task errors, for debugging (read with SQL).
+
+    Written by ``app.services.request_log``. Never stores request bodies,
+    query strings or tokens — only the path, status and the error text
+    (including the underlying cause, e.g. the Gemini 429/503 message)."""
+
+    __tablename__ = "t_log"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    method: str = Field(max_length=10)  # HTTP verb, or "TASK" for background jobs
+    path: str = Field(max_length=200)  # path only (no query string)
+    status: Optional[int] = Field(default=None)
+    duration_ms: Optional[int] = Field(default=None)
+    error: Optional[str] = Field(default=None)  # message + cause / traceback tail
+    client_ip: Optional[str] = Field(default=None, max_length=64)
+    origin: Optional[str] = Field(default=None, max_length=200)
+    user_agent: Optional[str] = Field(default=None, max_length=200)
+    user_email: Optional[str] = Field(default=None, max_length=255)

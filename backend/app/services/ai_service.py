@@ -93,11 +93,17 @@ _MAX_ATTEMPTS = 3
 
 
 def _call_gemini(prompt: str, temperature: float) -> str:
-    """One Gemini text call with retry/backoff on transient failures.
+    """One Gemini text call with retry/backoff; returns the response text."""
+    return _call_gemini_response(prompt, temperature).text
 
-    Returns raw response text; raises AIGenerationError otherwise. The
-    error message may contain provider details — routers must log it
-    server-side and send the frontend a generic message.
+
+def _call_gemini_response(prompt: str, temperature: float):
+    """One Gemini call with retry/backoff on transient failures.
+
+    Returns the raw response (non-empty text guaranteed); raises
+    AIGenerationError otherwise. The error message may contain provider
+    details — routers must log it server-side and send the frontend a
+    generic message.
     """
     client = _get_client()
     for attempt in range(1, _MAX_ATTEMPTS + 1):
@@ -116,16 +122,18 @@ def _call_gemini(prompt: str, temperature: float) -> str:
                 raise AIGenerationError(
                     "Gemini returned an empty response (possibly safety-blocked)."
                 )
-            return text
+            return response
         except AIGenerationError:
             raise
         except Exception as exc:
             code = getattr(exc, "code", None) or getattr(
                 getattr(exc, "response", None), "status_code", None
             )
+            # A per-day quota won't recover in seconds — retrying only burns time.
+            daily_quota = code == 429 and "per day" in str(exc).lower()
             transient = (
                 code in _TRANSIENT_CODES or "timeout" in type(exc).__name__.lower()
-            )
+            ) and not daily_quota
             if transient and attempt < _MAX_ATTEMPTS:
                 wait = 2 ** (attempt - 1)
                 logger.warning(
@@ -147,6 +155,12 @@ def _strip_fences(text: str) -> str:
     return re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
 
 
+def parse_model_json(text: str) -> Any:
+    # strict=False: models often emit raw newlines inside string values
+    # (e.g. code blocks in markdown fields), which strict JSON rejects.
+    return json.loads(text, strict=False)
+
+
 def _generate_json(prompt: str, temperature: float = 0.3) -> Dict[str, Any]:
     """Call Gemini asking for JSON and parse it defensively.
 
@@ -159,7 +173,7 @@ def _generate_json(prompt: str, temperature: float = 0.3) -> Dict[str, Any]:
         )
     text = _strip_fences(_call_gemini(prompt, temperature))
     try:
-        return json.loads(text)
+        return parse_model_json(text)
     except json.JSONDecodeError:
         logger.warning(
             "Gemini returned invalid JSON (starts with %r) — retrying once "
@@ -174,7 +188,7 @@ def _generate_json(prompt: str, temperature: float = 0.3) -> Dict[str, Any]:
     )
     text = _strip_fences(_call_gemini(correction, temperature))
     try:
-        return json.loads(text)
+        return parse_model_json(text)
     except json.JSONDecodeError as exc:
         raise AIGenerationError(
             f"Gemini returned invalid JSON after retry: {text[:200]}"

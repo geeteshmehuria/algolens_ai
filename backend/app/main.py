@@ -20,6 +20,8 @@ from app.routers import (
     problem_import,
 )
 from app.common import routes as common_routes
+from app.middleware import failure_log
+from app.services import request_log
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,16 @@ logger.info("Allowed CORS origins: %s", allowed_origins)
 allow_origin_regex = settings.CORS_ORIGIN_REGEX if settings.CORS_ORIGIN_REGEX else None
 if allow_origin_regex:
     logger.info("Allowed CORS origin regex: %s", allow_origin_regex)
+
+# Records failed requests (with the real cause) in the t_log table. Installed
+# before CORS so CORS stays outermost and error responses keep CORS headers.
+failure_log.install(app)
+
+
+@app.on_event("startup")
+def _prune_failure_log():
+    request_log.prune()
+
 
 app.add_middleware(
     CORSMiddleware,

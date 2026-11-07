@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 from app.config import settings
 from app.models import DSAPattern, DSATopic, User
 from app.routers.auth import get_user_role_names
+from app.services.ai_service import ai_available
 from app.services.progress_service import learning_summary
 
 from app.common.schemas import (
@@ -56,7 +57,7 @@ def build_contents(session: Session, user: User) -> ContentsResponse:
         },
         feature_flags={
             # Real, non-sensitive capability flags the UI can branch on.
-            "ai_enabled": bool(settings.GOOGLE_GEMINI_API_KEY),
+            "ai_enabled": ai_available(),
             "email_enabled": bool(settings.SMTP_HOST),
             "rate_limit_enabled": bool(settings.RATE_LIMIT_ENABLED),
         },

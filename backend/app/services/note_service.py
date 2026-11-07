@@ -1,6 +1,5 @@
 # app/services/note_service.py
 import json
-import re
 import time
 import logging
 from typing import List, Dict, Any, Optional, Literal, Tuple
@@ -15,7 +14,14 @@ from app.models import (
     UserQuizAttempt,
     AINoteGenerationLog,
 )
-from app.services.ai_service import ai_available, AIUnavailableError, AIGenerationError
+from app.services.ai_service import (
+    ai_available,
+    AIUnavailableError,
+    AIGenerationError,
+    _call_gemini_response,
+    _strip_fences,
+    parse_model_json,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +34,18 @@ class ProblemInfo(BaseModel):
     pattern: str
     what_to_learn: str
     leetcode_slug: Optional[str] = None
+
+    @field_validator("difficulty", mode="before")
+    def normalize_difficulty(cls, v):
+        if isinstance(v, str):
+            v_norm = v.strip().capitalize()
+            if "Easy" in v_norm:
+                return "Easy"
+            if "Hard" in v_norm:
+                return "Hard"
+            if "Medium" in v_norm:
+                return "Medium"
+        return v
 
 
 class NoteSection(BaseModel):
@@ -141,17 +159,6 @@ class QuizInput(BaseModel):
 
 # --- GEMINI CLIENT WRAPPER ---
 
-_client = None
-
-
-def _get_client():
-    global _client
-    if _client is None:
-        from google import genai
-
-        _client = genai.Client(api_key=settings.GOOGLE_GEMINI_API_KEY)
-    return _client
-
 
 def _call_gemini_with_usage(
     prompt: str, temperature: float = 0.3
@@ -163,25 +170,13 @@ def _call_gemini_with_usage(
         )
 
     t0 = time.time()
-    try:
-        client = _get_client()
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-            config={
-                "response_mime_type": "application/json",
-                "temperature": temperature,
-            },
-        )
-        latency_ms = int((time.time() - t0) * 1000)
-        text = response.text or ""
-    except Exception as exc:
-        raise AIGenerationError(f"Gemini request failed: {exc}") from exc
+    # Shared call path: timeout + retry/backoff on 429/5xx (e.g. 503 "high demand").
+    response = _call_gemini_response(prompt, temperature)
+    latency_ms = int((time.time() - t0) * 1000)
 
-    # Parse and strip md fences
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
+    text = _strip_fences(response.text)
     try:
-        data = json.loads(text)
+        data = parse_model_json(text)
     except json.JSONDecodeError as exc:
         raise AIGenerationError(f"Gemini returned invalid JSON: {text[:200]}") from exc
 

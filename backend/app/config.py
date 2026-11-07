@@ -1,6 +1,7 @@
 # app/config.py
 import logging
 import os
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,13 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator("GOOGLE_GEMINI_API_KEY", "GEMINI_MODEL", mode="before")
+    @classmethod
+    def _strip_ai_settings(cls, value):
+        # Secrets pasted or piped into env vars often carry a trailing
+        # newline/CRLF, which Gemini rejects as an invalid key.
+        return value.strip() if isinstance(value, str) else value
 
     @property
     def is_production(self) -> bool:

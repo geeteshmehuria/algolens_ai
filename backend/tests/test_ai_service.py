@@ -221,3 +221,20 @@ def test_generate_json_roundtrip_through_public_function(
     )
     out = ai_service.generate_explanation(problem)
     assert out["pattern"] == "Hashing"
+
+
+def test_daily_quota_429_fails_fast(with_api_key, monkeypatch):
+    err = Exception(
+        "429 RESOURCE_EXHAUSTED. Generate content requests per day limit exceeded"
+    )
+    err.code = 429
+    client = _install_client(monkeypatch, [err, '{"ok": true}'])
+    with pytest.raises(AIGenerationError, match="per day"):
+        ai_service._generate_json("prompt")
+    assert client.models.calls == 1
+
+
+def test_model_json_allows_raw_newlines_in_strings():
+    assert ai_service.parse_model_json('{"md": "```py\nx = 1\n```"}') == {
+        "md": "```py\nx = 1\n```"
+    }

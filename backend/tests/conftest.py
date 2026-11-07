@@ -16,6 +16,20 @@ def _reset_rate_limiter():
     rate_limit.reset_all()
 
 
+@pytest.fixture(autouse=True)
+def _isolate_failure_log(monkeypatch):
+    """The failure-log middleware writes via its own session; point it at a
+    throwaway in-memory DB so tests never touch the real database."""
+    from app.services import request_log
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(engine)
+    monkeypatch.setattr(request_log, "session_factory", lambda: Session(engine))
+    yield engine
+
+
 @pytest.fixture
 def session():
     engine = create_engine(
